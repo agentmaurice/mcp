@@ -1,0 +1,62 @@
+# syntax=docker/dockerfile:1.7
+
+ARG GO_BROWSER_VERSION=1.26.0
+ARG SIDECAR_IMAGE=ghcr.io/agentmaurice/mcp/mcp-sidecar:v0.1.0
+
+FROM golang:${GO_BROWSER_VERSION}-bookworm@sha256:2a0ba12e116687098780d3ce700f9ce3cb340783779646aafbabed748fa6677c AS browser-builder
+WORKDIR /src/mcp
+
+COPY shared ./shared
+COPY browser/go.mod browser/go.sum ./browser/
+WORKDIR /src/mcp/browser
+ENV GOTOOLCHAIN=auto
+RUN go mod download
+
+WORKDIR /src/mcp
+COPY browser ./browser
+WORKDIR /src/mcp/browser
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o /out/browser-mcp ./cmd/browser
+
+FROM ${SIDECAR_IMAGE} AS sidecar
+
+FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818
+
+ARG LIGHTPANDA_URL=https://github.com/lightpanda-io/browser/releases/download/0.3.6/lightpanda-x86_64-linux
+ARG LIGHTPANDA_SHA256=e438c0ad44e0f6916c14cf13beb003512c60438d8fd200738d2e596e73f652d6
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /opt/lightpanda && \
+    curl -fsSL -o /opt/lightpanda/lightpanda "${LIGHTPANDA_URL}" && \
+    echo "${LIGHTPANDA_SHA256}  /opt/lightpanda/lightpanda" | sha256sum -c - && \
+    chmod +x /opt/lightpanda/lightpanda
+
+RUN groupadd -g 1000 app && \
+    useradd -u 1000 -g app -m app && \
+    mkdir -p /app/configs /app/logs /share/lightpanda /var/mcp/credentials /tmp && \
+    chown -R app:app /app /share/lightpanda /var/mcp /tmp
+
+COPY --from=browser-builder /out/browser-mcp /usr/local/bin/browser-mcp
+COPY --from=sidecar /usr/local/bin/mcp_sidecar /usr/local/bin/mcp-sidecar
+COPY browser/configs/config.json /app/configs/config.json
+COPY --chmod=755 browser/docker/run-browser-stdio.sh /usr/local/bin/run-browser-stdio.sh
+
+USER app
+WORKDIR /app
+
+ENV BROWSER_CONFIG_PATH=/app/configs/config.json
+ENV TMPDIR=/tmp
+ENV LIGHTPANDA_DATA_DIR=/tmp/lightpanda
+ENV MCP_SIDECAR_CREDENTIALS_PATH=/var/mcp/credentials
+ENV MCP_SIDECAR_LOCAL_MCP_TRANSPORT=stdio
+ENV MCP_SIDECAR_LOCAL_MCP_COMMAND=/usr/local/bin/run-browser-stdio.sh
+ENV MCP_SIDECAR_MCP_TYPE=browser
+ENV MCP_SIDECAR_LOG_LEVEL=info
+ENV MCP_SIDECAR_LOG_ENCODING=json
+ENV BROWSER_BROWSER_POOL_MODE=single
+ENV BROWSER_BROWSER_POOL_SIZE=1
+
+ENTRYPOINT ["/usr/local/bin/mcp-sidecar", "start"]

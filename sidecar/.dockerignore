@@ -1,0 +1,13 @@
+.git
+.gitignore
+.gitlab-ci.yml
+docker/
+docs/
+bin/
+dist/
+*.test
+*.out
+.env*
+credentials/
+*.pem
+*.key

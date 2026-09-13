@@ -1,0 +1,38 @@
+# ---- builder ----
+ARG GO_VERSION=1.26.0
+FROM golang:${GO_VERSION}-bookworm AS builder
+
+WORKDIR /src/mcp
+
+# deps Go (cache)
+COPY shared ./shared
+COPY memory/go.mod memory/go.sum ./memory/
+WORKDIR /src/mcp/memory
+ENV GOTOOLCHAIN=auto
+RUN go mod download
+
+# sources
+WORKDIR /src/mcp
+COPY memory ./memory
+WORKDIR /src/mcp/memory
+
+# build Go (no CGO)
+ENV CGO_ENABLED=0
+RUN go build -trimpath -tags postgres -ldflags="-s -w" -o /out/mcp-memory ./cmd/memory
+
+# ---- runtime ----
+FROM debian:bookworm-slim AS runtime
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /out/mcp-memory /usr/local/bin/mcp-memory
+
+RUN useradd -m appuser
+
+USER appuser
+ENV MEMORY_STORAGE_BACKEND=postgres
+EXPOSE 8080
+
+ENTRYPOINT ["/usr/local/bin/mcp-memory"]

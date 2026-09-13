@@ -1,0 +1,15 @@
+bin/
+dist/
+*.exe
+*.test
+*.out
+coverage.*
+.env
+.env.*
+!.env.example
+credentials/
+*.pem
+*.key
+.vscode/
+.idea/
+.DS_Store

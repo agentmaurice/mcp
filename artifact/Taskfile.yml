@@ -1,0 +1,13 @@
+version: '3'
+
+tasks:
+  fmt:
+    cmds: [gofmt -w cmd internal]
+  vet:
+    cmds: [go vet ./...]
+  test:
+    cmds: [go test ./...]
+  build:
+    cmds: [go build -trimpath -o bin/artifact ./cmd/artifact]
+  check:
+    deps: [fmt, vet, test, build]

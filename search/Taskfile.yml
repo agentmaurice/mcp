@@ -1,0 +1,15 @@
+version: '3'
+
+tasks:
+  fmt:
+    cmds: [gofmt -w cmd internal]
+  vet:
+    cmds: [go vet ./...]
+  test:
+    cmds: [go test ./...]
+  build:
+    cmds: [go build -trimpath -o bin/search ./cmd/search]
+  test:integration:
+    cmds: [sh scripts/integration-local.sh]
+  check:
+    deps: [fmt, vet, test, build]

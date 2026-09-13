@@ -1,0 +1,44 @@
+FROM golang:1.26.0-bookworm@sha256:2a0ba12e116687098780d3ce700f9ce3cb340783779646aafbabed748fa6677c AS builder
+
+WORKDIR /src/mcp
+COPY shared ./shared
+COPY ssh/go.mod ssh/go.sum ./ssh/
+WORKDIR /src/mcp/ssh
+RUN go mod download
+
+WORKDIR /src/mcp
+COPY ssh ./ssh
+WORKDIR /src/mcp/ssh
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/ssh ./cmd/ssh
+
+ARG SIDECAR_IMAGE
+FROM ${SIDECAR_IMAGE} AS sidecar
+
+FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -g 1000 app \
+    && useradd -u 1000 -g app -m app \
+    && mkdir -p /app /var/mcp/credentials /etc/agentmaurice /tmp \
+    && chown -R app:app /app /var/mcp /tmp
+
+COPY --chmod=755 --from=builder /out/ssh /usr/local/bin/ssh
+COPY --chmod=755 --from=builder /src/mcp/ssh/docker/run-ssh-stdio.sh /usr/local/bin/run-ssh-stdio.sh
+COPY --chmod=755 --from=sidecar /usr/local/bin/mcp_sidecar /usr/local/bin/mcp-sidecar
+
+WORKDIR /app
+USER app
+
+ENV TMPDIR=/tmp
+ENV SSH_EXECUTION_MODE=run
+ENV SSH_TARGETS_FILE=/etc/agentmaurice/ssh-targets.json
+ENV MCP_CREDENTIALS_PATH=/var/mcp/credentials/credentials.json
+ENV MCP_SIDECAR_CREDENTIALS_PATH=/var/mcp/credentials
+ENV MCP_SIDECAR_LOCAL_MCP_TRANSPORT=stdio
+ENV MCP_SIDECAR_LOCAL_MCP_COMMAND=/usr/local/bin/run-ssh-stdio.sh
+ENV MCP_SIDECAR_MCP_TYPE=ssh
+ENV MCP_SIDECAR_LOG_LEVEL=info
+ENV MCP_SIDECAR_LOG_ENCODING=json
+
+ENTRYPOINT ["/usr/local/bin/mcp-sidecar", "start"]

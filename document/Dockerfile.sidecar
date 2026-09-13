@@ -1,0 +1,43 @@
+FROM rust:1.91.1-bookworm@sha256:c1e5f19e773b7878c3f7a805dd00a495e747acbdc76fb2337a4ebf0418896b33 AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    cmake \
+    clang \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
+COPY src ./src
+RUN cargo build --release --locked
+
+ARG SIDECAR_IMAGE
+FROM ${SIDECAR_IMAGE} AS sidecar
+
+FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g 1000 app \
+    && useradd -u 1000 -g app -m app \
+    && mkdir -p /app /var/mcp/credentials /tmp \
+    && chown -R app:app /app /var/mcp /tmp
+
+COPY --chmod=755 --from=builder /src/target/release/mcp-document /usr/local/bin/mcp-document
+COPY --chmod=755 docker/run-document-stdio.sh /usr/local/bin/run-document-stdio.sh
+COPY --chmod=755 --from=sidecar /usr/local/bin/mcp_sidecar /usr/local/bin/mcp-sidecar
+
+WORKDIR /app
+USER app
+
+ENV TMPDIR=/tmp
+ENV MCP_SIDECAR_CREDENTIALS_PATH=/var/mcp/credentials
+ENV MCP_SIDECAR_LOCAL_MCP_TRANSPORT=stdio
+ENV MCP_SIDECAR_LOCAL_MCP_COMMAND=/usr/local/bin/run-document-stdio.sh
+ENV MCP_SIDECAR_MCP_TYPE=document
+ENV MCP_SIDECAR_LOG_LEVEL=info
+ENV MCP_SIDECAR_LOG_ENCODING=json
+
+ENTRYPOINT ["/usr/local/bin/mcp-sidecar", "start"]

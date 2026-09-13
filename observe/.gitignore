@@ -1,0 +1,4 @@
+/bin/
+/observe
+/.env
+*.log

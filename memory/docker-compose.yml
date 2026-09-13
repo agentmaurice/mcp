@@ -1,0 +1,17 @@
+services:
+  memory:
+    image: ghcr.io/agentmaurice/mcp/memory-duckdb:latest
+    ports:
+      - "8090:8090"
+    environment:
+      - SERVER_ADDRESS=:8090
+      - SERVER_BASE_PATH=/mcp
+      - MEMORY_BASE_DIR=/data
+      - MEMORY_DEFAULT_TENANT_ID=default
+      - LOGGING_LEVEL=info
+    volumes:
+      - memory-data:/data
+    restart: unless-stopped
+
+volumes:
+  memory-data:

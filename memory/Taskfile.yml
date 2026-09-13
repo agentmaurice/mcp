@@ -1,0 +1,108 @@
+version: '3'
+
+vars:
+  BINARY_NAME: memory
+  DOCKER_IMAGE_DUCKDB: memory-duckdb
+  DOCKER_IMAGE_POSTGRES: memory-postgres
+  DOCKER_TAG: latest
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  install:
+    desc: Install dependencies
+    cmds:
+      - go mod download
+      - go mod tidy
+
+  build:
+    desc: Build the binary (duckdb)
+    cmds:
+      - go build -tags duckdb -o {{.BINARY_NAME}} ./cmd/memory
+
+  build-postgres:
+    desc: Build the binary (postgres)
+    cmds:
+      - CGO_ENABLED=0 go build -tags postgres -o {{.BINARY_NAME}} ./cmd/memory
+
+  run:
+    desc: Run the application (SSE)
+    deps: [build]
+    cmds:
+      - ./{{.BINARY_NAME}} -transport=sse
+
+  run-stdio:
+    desc: Run the application (stdio)
+    deps: [build]
+    cmds:
+      - ./{{.BINARY_NAME}} -transport=stdio
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test -tags duckdb ./...
+
+  test-postgres:
+    desc: Run Postgres integration tests (requires POSTGRES_DSN or MEMORY_POSTGRES_DSN)
+    cmds:
+      - go test -tags postgres ./...
+
+  fmt:
+    desc: Format code
+    cmds:
+      - gofmt -w ./cmd ./internal
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...
+
+  docker-build:
+    desc: Build Docker image (duckdb, local arch)
+    cmds:
+      - docker build -f Dockerfile -t {{.DOCKER_IMAGE_DUCKDB}}:{{.DOCKER_TAG}} ..
+
+  docker-build-postgres:
+    desc: Build Docker image (postgres, local arch)
+    cmds:
+      - docker build -f Dockerfile.postgres -t {{.DOCKER_IMAGE_POSTGRES}}:{{.DOCKER_TAG}} ..
+
+  docker-run:
+    desc: Run Docker container (duckdb, SSE)
+    deps: [docker-build]
+    cmds:
+      - docker run --rm -p 8080:8080 --env-file .env {{.DOCKER_IMAGE_DUCKDB}}:{{.DOCKER_TAG}}
+
+  docker-buildx:
+    desc: Build multi-arch image (duckdb)
+    cmds:
+      - docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile -t {{.DOCKER_IMAGE_DUCKDB}}:{{.DOCKER_TAG}} ..
+
+  docker-buildx-postgres:
+    desc: Build multi-arch image (postgres)
+    cmds:
+      - docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile.postgres -t {{.DOCKER_IMAGE_POSTGRES}}:{{.DOCKER_TAG}} ..
+
+  docker-push:
+    desc: Build and push multi-arch image (duckdb)
+    cmds:
+      - docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile -t {{.DOCKER_IMAGE_DUCKDB}}:{{.DOCKER_TAG}} --push ..
+
+  docker-push-postgres:
+    desc: Build and push multi-arch image (postgres)
+    cmds:
+      - docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile.postgres -t {{.DOCKER_IMAGE_POSTGRES}}:{{.DOCKER_TAG}} --push ..
+
+  acceptance:
+    desc: Run acceptance script (upsert + append_fact + query)
+    cmds:
+      - ./scripts/acceptance.sh
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -f {{.BINARY_NAME}}
+      - go clean

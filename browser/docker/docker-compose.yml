@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  browser-mcp:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3000:3000"  # MCP Server
+      - "9222:9222"  # CDP (debug)
+    environment:
+      - BROWSER_SERVER_ADDRESS=:3000
+      - BROWSER_BROWSER_CDP_ENDPOINT=ws://127.0.0.1:9222
+      - BROWSER_LOGGING_LEVEL=info
+      - BROWSER_LOGGING_FORMAT=json
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # Alternative: Use external Chrome/Chromium
+  # chrome:
+  #   image: browserless/chrome:latest
+  #   ports:
+  #     - "9222:3000"
+  #   environment:
+  #     - CONNECTION_TIMEOUT=600000
+  #     - MAX_CONCURRENT_SESSIONS=10

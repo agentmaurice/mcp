@@ -1,0 +1,25 @@
+services:
+  embedder:
+    image: python:3.12-alpine@sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa0deec78ade7dc31
+    user: "65532:65532"
+    read_only: true
+    command: ["python", "/fixture.py"]
+    volumes: ["./embedder.py:/fixture.py:ro"]
+  meili:
+    image: getmeili/meilisearch:v1.53.2@sha256:c94e58ca09662dd6e65e8f1b0fd145767be3da7d5422a863a27b8d2b68e090c9
+    user: "1000:1000"
+    command: ["/bin/sh", "/run-meili.sh"]
+    volumes: ["./run-meili.sh:/run-meili.sh:ro"]
+    environment:
+      MEILI_MASTER_KEY: search-integration-ephemeral-only
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_ENV: development
+      MEILI_LOG_LEVEL: WARN
+    ports: ["127.0.0.1::7700"]
+    tmpfs: ["/meili_data:uid=1000,gid=1000"]
+    depends_on: [embedder]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:7700/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 30

@@ -1,0 +1,21 @@
+go 1.26
+
+use (
+	./api
+	./artifact
+	./brain
+	./browser
+	./data
+	./filesearch
+	./guard
+	./memory
+	./moderator
+	./observe
+	./ocr
+	./rag
+	./search
+	./shared
+	./sidecar
+	./ssh
+	./system
+)

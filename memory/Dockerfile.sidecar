@@ -1,0 +1,60 @@
+# syntax=docker/dockerfile:1.7
+
+ARG GO_MEMORY_VERSION=1.26.0
+ARG SIDECAR_IMAGE=ghcr.io/agentmaurice/mcp/mcp-sidecar:v0.1.0
+
+FROM golang:${GO_MEMORY_VERSION}-bookworm AS memory-builder
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    unzip \
+    build-essential \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src/mcp
+
+COPY shared ./shared
+COPY memory/go.mod memory/go.sum ./memory/
+WORKDIR /src/mcp/memory
+ENV GOTOOLCHAIN=auto
+RUN go mod download
+
+WORKDIR /src/mcp
+COPY memory ./memory
+WORKDIR /src/mcp/memory
+ENV CGO_ENABLED=1
+RUN go build -trimpath -tags duckdb -ldflags="-s -w" -o /out/mcp-memory ./cmd/memory
+
+FROM ${SIDECAR_IMAGE} AS sidecar
+
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g 1000 app && \
+    useradd -u 1000 -g app -m app && \
+    mkdir -p /app/logs /var/lib/agentmaurice /var/mcp/credentials /tmp && \
+    chown -R app:app /app /var/lib/agentmaurice /var/mcp /tmp
+
+COPY --from=memory-builder /out/mcp-memory /usr/local/bin/mcp-memory
+COPY --from=sidecar /usr/local/bin/mcp_sidecar /usr/local/bin/mcp-sidecar
+COPY docker/run-memory-stdio.sh /usr/local/bin/run-memory-stdio.sh
+RUN chmod +x /usr/local/bin/run-memory-stdio.sh
+
+USER app
+WORKDIR /app
+
+ENV MEMORY_BASE_DIR=/var/lib/agentmaurice
+ENV MEMORY_STORAGE_BACKEND=duckdb
+ENV TMPDIR=/tmp
+ENV MCP_SIDECAR_CREDENTIALS_PATH=/var/mcp/credentials
+ENV MCP_SIDECAR_LOCAL_MCP_TRANSPORT=stdio
+ENV MCP_SIDECAR_LOCAL_MCP_COMMAND=/usr/local/bin/run-memory-stdio.sh
+ENV MCP_SIDECAR_MCP_TYPE=memory
+ENV MCP_SIDECAR_LOG_LEVEL=info
+ENV MCP_SIDECAR_LOG_ENCODING=json
+
+ENTRYPOINT ["/usr/local/bin/mcp-sidecar", "start"]

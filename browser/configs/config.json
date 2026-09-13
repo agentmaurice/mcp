@@ -1,0 +1,50 @@
+{
+	"server": {
+		"address": ":8085",
+		"sse_path": "/mcp/sse",
+		"message_path": "/mcp/message",
+		"health_path": "/health"
+	},
+	"browser": {
+		"cdp_endpoint": "ws://127.0.0.1:9222",
+		"headless": true,
+		"default_timeout": "30s",
+		"navigation_timeout": "60s",
+		"auto_reconnect": true,
+		"reconnect_retries": 1,
+		"screenshot_format": "png",
+		"screenshot_quality": 80,
+		"user_agent": "",
+		"window_width": 1920,
+		"window_height": 1080,
+		"pool_mode": "single",
+		"pool_size": 1,
+		"pool_endpoints": [],
+		"pool_manager_url": "",
+		"pool_manager_token": "",
+		"pool_manager_timeout": "2s",
+		"pool_client_id": "",
+		"max_sessions_per_instance": 0,
+		"session_idle_ttl": "10m",
+		"acquire_timeout": "2s",
+		"max_queue_depth": 128,
+		"selection_policy": "least_loaded"
+	},
+	"buffer": {
+		"enabled": false,
+		"url": "",
+		"auth_token": "",
+		"namespace": "browser",
+		"soft_threshold_bytes": 500000,
+		"hard_threshold_bytes": 1000000,
+		"max_upload_bytes": 20000000,
+		"ttl_seconds": 600,
+		"network_retries": 1,
+		"timeout": "10s"
+	},
+	"logging": {
+		"level": "debug",
+		"format": "json",
+		"output_path": "stdout"
+	}
+}

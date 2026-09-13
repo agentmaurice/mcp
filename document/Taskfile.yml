@@ -1,0 +1,26 @@
+version: '3'
+
+tasks:
+  fmt:
+    desc: Check Rust formatting
+    cmds:
+      - cargo fmt --all -- --check
+
+  lint:
+    desc: Run Clippy with warnings denied
+    cmds:
+      - cargo clippy --all-targets --all-features -- -D warnings
+
+  test:
+    desc: Run the Rust test suite
+    cmds:
+      - cargo test --all-targets --all-features
+
+  build:
+    desc: Build the release binary
+    cmds:
+      - cargo build --release --locked
+
+  check:
+    desc: Run all local quality checks
+    deps: [fmt, lint, test]

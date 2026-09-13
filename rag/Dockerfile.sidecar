@@ -1,0 +1,51 @@
+# syntax=docker/dockerfile:1.7
+
+ARG GO_RAG_VERSION=1.26.0
+ARG SIDECAR_IMAGE=ghcr.io/agentmaurice/mcp/mcp-sidecar:v0.1.0
+
+FROM golang:${GO_RAG_VERSION}-bookworm AS rag-builder
+WORKDIR /src/mcp
+
+COPY shared ./shared
+COPY rag/go.mod rag/go.sum ./rag/
+WORKDIR /src/mcp/rag
+ENV GOTOOLCHAIN=auto
+RUN go mod download
+
+WORKDIR /src/mcp
+COPY rag ./rag
+WORKDIR /src/mcp/rag
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o /out/rag ./cmd/rag
+
+FROM ${SIDECAR_IMAGE} AS sidecar
+
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g 1000 app && \
+    useradd -u 1000 -g app -m app && \
+    mkdir -p /app/logs /var/mcp/credentials /var/lib/rag /tmp && \
+    chown -R app:app /app /var/mcp /var/lib/rag /tmp
+
+COPY --from=rag-builder /out/rag /usr/local/bin/rag
+COPY --from=sidecar /usr/local/bin/mcp_sidecar /usr/local/bin/mcp-sidecar
+COPY rag/docker/run-rag-stdio.sh /usr/local/bin/run-rag-stdio.sh
+RUN chmod +x /usr/local/bin/run-rag-stdio.sh
+
+USER app
+WORKDIR /app
+
+ENV APP_ROLE=api
+ENV TMPDIR=/tmp
+ENV MCP_SIDECAR_CREDENTIALS_PATH=/var/mcp/credentials
+ENV MCP_SIDECAR_LOCAL_MCP_TRANSPORT=stdio
+ENV MCP_SIDECAR_LOCAL_MCP_COMMAND=/usr/local/bin/run-rag-stdio.sh
+ENV MCP_SIDECAR_MCP_TYPE=rag
+ENV MCP_SIDECAR_LOG_LEVEL=info
+ENV MCP_SIDECAR_LOG_ENCODING=json
+
+ENTRYPOINT ["/usr/local/bin/mcp-sidecar", "start"]

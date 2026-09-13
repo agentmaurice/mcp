@@ -1,0 +1,67 @@
+{
+  "server": {
+    "address": ":8080",
+    "base_path": "/mcp",
+    "keep_alive": true,
+    "keep_alive_interval": 15
+  },
+  "storage": {
+    "backend": "duckdb",
+    "base_dir": "./data",
+    "tenants_dir_name": "tenants",
+    "db_filename": "memory.duckdb",
+    "documents_dir_name": "documents",
+    "default_tenant_id": "default",
+    "validate_local_files": false,
+    "max_document_size_bytes": 52428800,
+    "read_max_open_conns": 8,
+    "read_max_idle_conns": 4,
+    "write_queue_size": 128,
+    "postgres_dsn": "postgres://user:pass@localhost:5432/agentmaurice?sslmode=disable",
+    "postgres_schema_prefix": "tenant_"
+  },
+  "query": {
+    "max_rows_default": 500,
+    "max_rows_limit": 5000,
+    "timeout_ms_default": 2000,
+    "timeout_ms_max": 10000,
+    "max_response_bytes": 2097152,
+    "disallow_select_star": false
+  },
+  "buffer": {
+    "enabled": false,
+    "service_url": "http://agentmaurice:3000/api/v1/buffer",
+    "token": "",
+    "namespace": "memory",
+    "soft_threshold": 524288,
+    "hard_threshold": 2097152,
+    "default_ttl": 600
+  },
+  "security": {
+    "denylist": [
+      "insert",
+      "update",
+      "delete",
+      "create",
+      "drop",
+      "alter",
+      "copy",
+      "attach",
+      "detach",
+      "pragma",
+      "export",
+      "import"
+    ],
+    "allowed_objects": [],
+    "allowed_columns": {},
+    "allowed_indexes": [],
+    "require_views_only": true,
+    "redaction_keys": ["email", "phone", "iban", "ssn", "password"],
+    "redact_value": "***redacted***"
+  },
+  "logging": {
+    "level": "info",
+    "enable_file": false,
+    "log_dir": "./logs"
+  }
+}

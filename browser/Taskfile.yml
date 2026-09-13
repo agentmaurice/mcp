@@ -1,0 +1,139 @@
+version: '3'
+
+vars:
+  BINARY_NAME: browser
+  DOCKER_IMAGE: browser-server
+  DOCKER_TAG: latest
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  install:
+    desc: Install dependencies
+    cmds:
+      - go mod download
+      - go mod tidy
+
+  build:
+    desc: Build the binary
+    cmds:
+      - go build -o {{.BINARY_NAME}} ./cmd/browser
+
+  run:
+    desc: Run the application
+    deps: [build]
+    cmds:
+      - ./{{.BINARY_NAME}}
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test -v -race -coverprofile=coverage.out ./...
+
+  test-coverage:
+    desc: Run tests with coverage report
+    deps: [test]
+    cmds:
+      - go tool cover -html=coverage.out
+
+  lint:
+    desc: Run linters
+    cmds:
+      - golangci-lint run
+
+  fmt:
+    desc: Format code
+    cmds:
+      - go fmt ./...
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...
+
+  docker-build:
+    desc: Build Docker image
+    cmds:
+      - docker build -f Dockerfile -t {{.DOCKER_IMAGE}}:{{.DOCKER_TAG}} ..
+
+  docker-run:
+    desc: Run Docker container
+    deps: [docker-build]
+    cmds:
+      - docker run --rm -p 3000:3000 -p 9222:9222 --env-file .env {{.DOCKER_IMAGE}}:{{.DOCKER_TAG}}
+
+  compose-up:
+    desc: Start all services with docker compose
+    cmds:
+      - docker compose -f docker/docker-compose.yml up -d
+
+  compose-down:
+    desc: Stop all services
+    cmds:
+      - docker compose -f docker/docker-compose.yml down
+
+  compose-logs:
+    desc: View logs
+    cmds:
+      - docker compose -f docker/docker-compose.yml logs -f
+
+  compose-restart:
+    desc: Restart all services
+    cmds:
+      - docker compose -f docker/docker-compose.yml restart
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -f {{.BINARY_NAME}}
+      - rm -f coverage.out
+      - go clean
+
+  deps:
+    desc: Check for outdated dependencies
+    cmds:
+      - go list -u -m all
+
+  test:e2e:up:
+    desc: Start Lightpanda browser for E2E tests
+    cmds:
+      - docker compose -f docker-compose.dev.yml up -d
+      - echo "Waiting for Lightpanda to be ready on port 9222..."
+      - |
+        for i in $(seq 1 30); do
+          if curl -s http://127.0.0.1:9222/json/version > /dev/null 2>&1; then
+            echo "Lightpanda is ready."
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "ERROR: Lightpanda did not start in time."
+        exit 1
+
+  test:e2e:down:
+    desc: Stop Lightpanda browser
+    cmds:
+      - docker compose -f docker-compose.dev.yml down
+
+  test:e2e:
+    desc: Run E2E tests (requires Lightpanda on port 9222)
+    deps: [test:e2e:up]
+    cmds:
+      - go test -tags e2e -v -timeout 120s -count=1 ./internal/transport/mcp/
+    env:
+      E2E_CDP_ENDPOINT: ws://127.0.0.1:9222
+
+  test:e2e:run:
+    desc: Run E2E tests without starting Lightpanda (assumes already running)
+    cmds:
+      - go test -tags e2e -v -timeout 120s -count=1 ./internal/transport/mcp/
+    env:
+      E2E_CDP_ENDPOINT: ws://127.0.0.1:9222
+
+  dev:
+    desc: Run in development mode with hot reload
+    cmds:
+      - air

@@ -1,0 +1,38 @@
+# Binaries
+/browser
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go test/build artifacts
+*.test
+*.out
+coverage.out
+__debug_bin*
+dist/
+build/
+tmp/
+temp/
+
+# Dependency/workspace files
+vendor/
+go.work
+
+# Local environment and editor state
+.env
+.env.local
+.claude/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/

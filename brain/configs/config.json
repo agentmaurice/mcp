@@ -1,0 +1,54 @@
+{
+  "server": {
+    "address": ":8085",
+    "base_path": "/mcp/brain",
+    "keep_alive": true,
+    "keep_alive_interval": 15
+  },
+  "storage": {
+    "backend": "duckdb",
+    "base_dir": "./data",
+    "tenants_dir_name": "tenants",
+    "db_filename": "brain.duckdb",
+    "default_tenant_id": "default",
+    "read_max_open_conns": 8,
+    "read_max_idle_conns": 4,
+    "write_queue_size": 128
+  },
+  "embedding": {
+    "provider": "ollama",
+    "model": "nomic-embed-text",
+    "dimensions": 768,
+    "batch_size": 32,
+    "ollama_url": "http://localhost:11434",
+    "openai_base_url": "https://api.openai.com/v1"
+  },
+  "indexing": {
+    "workers": 2,
+    "chunk_max_tokens": 1000,
+    "chunk_overlap_tokens": 100,
+    "max_document_bytes": 10485760,
+    "enrichment_enabled": false
+  },
+  "search": {
+    "default_max_results": 20,
+    "max_results_limit": 100,
+    "timeout_ms": 5000,
+    "hybrid_default_alpha": 0.6,
+    "rrf_k": 60
+  },
+  "buffer": {
+    "enabled": false,
+    "service_url": "",
+    "token": "",
+    "namespace": "brain",
+    "soft_threshold": 524288,
+    "hard_threshold": 2097152,
+    "default_ttl": 600
+  },
+  "logging": {
+    "level": "info",
+    "enable_file": false,
+    "log_dir": "./logs"
+  }
+}
