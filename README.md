@@ -38,6 +38,10 @@ Last sync: 2026-09-13.
 `shared` is the common library used by the other servers; it is not a
 server by itself.
 
+Machine-readable index of every shipped server, sidecar image and One
+compatibility flag: [`catalog.json`](catalog.json). AgentMaurice One and
+other local runtimes should read that file instead of calling Console.
+
 ## Container images
 
 Every release is published on the GitHub Container Registry under

@@ -1,0 +1,656 @@
+{
+  "schema_version": "agentmaurice.mcp-catalog/v1",
+  "generated_at": "2026-09-13T14:36:53Z",
+  "repository": "https://github.com/agentmaurice/mcp",
+  "registry": "ghcr.io/agentmaurice/mcp",
+  "servers": [
+    {
+      "slug": "api",
+      "kind": "server",
+      "version": "v0.1.3",
+      "commit": "f2721e3485420e006d2c810e6af1ae512f155e69",
+      "description": "Go MCP server for calling internal APIs described by an approved OpenAPI 3.0",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": null,
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/api-sidecar:v0.1.3",
+      "images": [
+        {
+          "name": "api-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/api-sidecar:v0.1.3",
+          "role": "sidecar"
+        }
+      ],
+      "tools": [
+        {
+          "name": "api_health_v1",
+          "description": "Check the API MCP"
+        },
+        {
+          "name": "api_capabilities_v1",
+          "description": "Describe OpenAPI support and egress safety controls"
+        },
+        {
+          "name": "api_describe_v1",
+          "description": "List approved operations or describe one operationId"
+        },
+        {
+          "name": "api_call_v1",
+          "description": "Call one approved OpenAPI operationId"
+        }
+      ],
+      "tags": [
+        "api",
+        "openapi",
+        "http",
+        "integration"
+      ]
+    },
+    {
+      "slug": "artifact",
+      "kind": "server",
+      "version": "v0.1.3",
+      "commit": "9fb5cad9c76bdbcd0c83764054b660c158f3868b",
+      "description": "Go MCP server for creating, patching, rendering and inspecting deterministic",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": null,
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.1.3",
+      "images": [
+        {
+          "name": "artifact-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.1.3",
+          "role": "sidecar"
+        }
+      ],
+      "tools": [
+        {
+          "name": "artifact_health_v1",
+          "description": "Check the Artifact MCP"
+        },
+        {
+          "name": "artifact_capabilities_v1",
+          "description": "Describe supported formats, renderer and limits"
+        },
+        {
+          "name": "artifact_create_v1",
+          "description": "Create a deterministic bounded artifact"
+        },
+        {
+          "name": "artifact_patch_v1",
+          "description": "Apply structured changes to an artifact"
+        },
+        {
+          "name": "artifact_render_v1",
+          "description": "Render an artifact to a deterministic preview"
+        },
+        {
+          "name": "artifact_inspect_v1",
+          "description": "Validate an artifact and return its provenance"
+        }
+      ],
+      "tags": [
+        "artifact",
+        "document",
+        "render",
+        "pdf",
+        "export"
+      ]
+    },
+    {
+      "slug": "brain",
+      "kind": "server",
+      "version": "v1.1.5",
+      "commit": "988f1ca3ff8de1242c08a9aa1078871d7a93195e",
+      "description": "Go MCP server that indexes an organization's knowledge (code, documentation,",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": null,
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/brain-sidecar:v1.1.5",
+      "images": [
+        {
+          "name": "brain",
+          "ref": "ghcr.io/agentmaurice/mcp/brain:v1.1.5",
+          "role": "standalone"
+        },
+        {
+          "name": "brain-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/brain-sidecar:v1.1.5",
+          "role": "sidecar"
+        }
+      ],
+      "tools": [],
+      "tags": []
+    },
+    {
+      "slug": "browser",
+      "kind": "server",
+      "version": "v1.0.29",
+      "commit": "0fbdd667d787df66c34b7580088ccf91f19e1600",
+      "description": "A Model Context Protocol (MCP) server for browser automation, built in Go. This server enables AI agents to control a web browser through a standardized protocol.",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": "Heavy image; needs a working Docker engine and enough RAM.",
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/browser-sidecar:v1.0.29",
+      "images": [
+        {
+          "name": "browser",
+          "ref": "ghcr.io/agentmaurice/mcp/browser:v1.0.29",
+          "role": "standalone"
+        },
+        {
+          "name": "browser-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/browser-sidecar:v1.0.29",
+          "role": "sidecar"
+        },
+        {
+          "name": "browser-pool-manager",
+          "ref": "ghcr.io/agentmaurice/mcp/browser-pool-manager:v1.0.29",
+          "role": "standalone"
+        }
+      ],
+      "tools": [],
+      "tags": []
+    },
+    {
+      "slug": "data",
+      "kind": "server",
+      "version": "v0.1.3",
+      "commit": "a7624e538074c932000fd93ae754775d28e6fbd4",
+      "description": "Go MCP server for profiling and running one-off queries on CSV or JSON tables,",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": null,
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/data-sidecar:v0.1.3",
+      "images": [
+        {
+          "name": "data-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/data-sidecar:v0.1.3",
+          "role": "sidecar"
+        }
+      ],
+      "tools": [
+        {
+          "name": "data_health_v1",
+          "description": "Check the Data MCP"
+        },
+        {
+          "name": "data_capabilities_v1",
+          "description": "Describe supported formats, query operations and limits"
+        },
+        {
+          "name": "data_profile_v1",
+          "description": "Infer columns and calculate bounded profiles"
+        },
+        {
+          "name": "data_query_v1",
+          "description": "Apply a closed JSON query plan"
+        },
+        {
+          "name": "data_export_v1",
+          "description": "Export a closed-plan result as bounded CSV or JSON"
+        }
+      ],
+      "tags": [
+        "data",
+        "csv",
+        "json",
+        "analytics",
+        "export"
+      ]
+    },
+    {
+      "slug": "document",
+      "kind": "server",
+      "version": "v0.1.1",
+      "commit": "29d576742a6e9a6b16428fb8382cce50b9e23b9d",
+      "description": "MCP Document converts office documents to Markdown locally for AgentMaurice",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": null,
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/document-sidecar:v0.1.1",
+      "images": [
+        {
+          "name": "document-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/document-sidecar:v0.1.1",
+          "role": "sidecar"
+        }
+      ],
+      "tools": [],
+      "tags": []
+    },
+    {
+      "slug": "filesearch",
+      "kind": "server",
+      "version": "v0.1.0",
+      "commit": "c164fdbed431e493331a50d31b429395a5433a84",
+      "description": "Go-based MCP server that provides file search capabilities using Google Gemini FileSearch API. It is designed to plug into MCPChatUI and follows the same architecture patterns as the `moderator` service.",
+      "sidecar_compatible": false,
+      "one_compatible": false,
+      "one_notes": null,
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/filesearch:v0.1.0",
+      "images": [
+        {
+          "name": "filesearch",
+          "ref": "ghcr.io/agentmaurice/mcp/filesearch:v0.1.0",
+          "role": "standalone"
+        }
+      ],
+      "tools": [],
+      "tags": []
+    },
+    {
+      "slug": "guard",
+      "kind": "server",
+      "version": "v0.1.3",
+      "commit": "b2f4705eeaa5b631334cd685300eec07f4f8d540",
+      "description": "Deterministic Go MCP server for detecting, masking and classifying sensitive",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": null,
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/guard-sidecar:v0.1.3",
+      "images": [
+        {
+          "name": "guard-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/guard-sidecar:v0.1.3",
+          "role": "sidecar"
+        }
+      ],
+      "tools": [
+        {
+          "name": "guard_health_v1",
+          "description": "Check the Guard MCP"
+        },
+        {
+          "name": "guard_capabilities_v1",
+          "description": "Describe sensitive-data categories, redaction modes and limits"
+        },
+        {
+          "name": "guard_scan_v1",
+          "description": "Locate PII and secrets without returning their values"
+        },
+        {
+          "name": "guard_redact_v1",
+          "description": "Redact PII and secrets"
+        },
+        {
+          "name": "guard_classify_v1",
+          "description": "Classify text by sensitivity"
+        }
+      ],
+      "tags": [
+        "guard",
+        "pii",
+        "secrets",
+        "redaction",
+        "classification"
+      ]
+    },
+    {
+      "slug": "memory",
+      "kind": "server",
+      "version": "v1.0.14",
+      "commit": "4a5d568c21a29b59de012e72be564697d07738aa",
+      "description": "MCP server providing a multi-tenant, read-safe SQL memory backed by DuckDB or PostgreSQL. Writes are handled by strict ingestion tools (no arbitrary SQL writes).",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": null,
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/memory-sidecar:v1.0.14",
+      "images": [
+        {
+          "name": "memory-duckdb",
+          "ref": "ghcr.io/agentmaurice/mcp/memory-duckdb:v1.0.14",
+          "role": "standalone"
+        },
+        {
+          "name": "memory-postgres",
+          "ref": "ghcr.io/agentmaurice/mcp/memory-postgres:v1.0.14",
+          "role": "standalone"
+        },
+        {
+          "name": "memory-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/memory-sidecar:v1.0.14",
+          "role": "sidecar"
+        }
+      ],
+      "tools": [],
+      "tags": []
+    },
+    {
+      "slug": "moderator",
+      "kind": "server",
+      "version": "v1.0.1",
+      "commit": "c04a3b9566eb94995c83985e1c8134c40cd52e8b",
+      "description": "Go-based MCP server that exposes a moderation tool powered by the Mistral API. It uses the official MCP Go SDK for modern stateless Streamable HTTP and keeps `mark3labs/mcp-go` for legacy SSE compatibility.",
+      "sidecar_compatible": false,
+      "one_compatible": false,
+      "one_notes": null,
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/moderator:v1.0.1",
+      "images": [
+        {
+          "name": "moderator",
+          "ref": "ghcr.io/agentmaurice/mcp/moderator:v1.0.1",
+          "role": "standalone"
+        }
+      ],
+      "tools": [],
+      "tags": []
+    },
+    {
+      "slug": "observe",
+      "kind": "server",
+      "version": "v0.1.3",
+      "commit": "4e6b2ba91088c336c2db09eb0e02bfd1c44b6e0b",
+      "description": "Deterministic diagnostic Go MCP server for OTLP JSON exports and already",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": null,
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/observe-sidecar:v0.1.3",
+      "images": [
+        {
+          "name": "observe-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/observe-sidecar:v0.1.3",
+          "role": "sidecar"
+        }
+      ],
+      "tools": [
+        {
+          "name": "observe_health_v1",
+          "description": "Check the Observe MCP"
+        },
+        {
+          "name": "observe_capabilities_v1",
+          "description": "Describe supported trace inputs and limits"
+        },
+        {
+          "name": "observe_run_v1",
+          "description": "Normalize a trace and return its bounded timeline"
+        },
+        {
+          "name": "observe_explain_v1",
+          "description": "Explain errors, retries and the critical path"
+        },
+        {
+          "name": "observe_compare_v1",
+          "description": "Compare two run traces"
+        }
+      ],
+      "tags": [
+        "observe",
+        "traces",
+        "diagnostics",
+        "otel",
+        "runtime"
+      ]
+    },
+    {
+      "slug": "ocr",
+      "kind": "server",
+      "version": "v0.1.2",
+      "commit": "3b50e819173f3ef08dd4058e1d70609d484a9ad9",
+      "description": "Managed, synchronous OCR MCP server. The service holds no provider key: it",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": null,
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/ocr-sidecar:v0.1.2",
+      "images": [
+        {
+          "name": "ocr-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/ocr-sidecar:v0.1.2",
+          "role": "sidecar"
+        }
+      ],
+      "tools": [],
+      "tags": []
+    },
+    {
+      "slug": "rag",
+      "kind": "server",
+      "version": "v1.0.16",
+      "commit": "18a1b9405be16bda93ff97329ae76095f8ec35d8",
+      "description": "A production-ready RAG (Retrieval-Augmented Generation) server implementing the Model Context Protocol (MCP).",
+      "sidecar_compatible": true,
+      "one_compatible": false,
+      "one_notes": "Needs PostgreSQL, Qdrant and an LLM provider in addition to Docker.",
+      "requires": [
+        "postgresql",
+        "qdrant",
+        "llm"
+      ],
+      "install_image": "ghcr.io/agentmaurice/mcp/rag-sidecar:v1.0.16",
+      "images": [
+        {
+          "name": "rag",
+          "ref": "ghcr.io/agentmaurice/mcp/rag:v1.0.16",
+          "role": "standalone"
+        },
+        {
+          "name": "rag-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/rag-sidecar:v1.0.16",
+          "role": "sidecar"
+        }
+      ],
+      "tools": [],
+      "tags": []
+    },
+    {
+      "slug": "search",
+      "kind": "server",
+      "version": "v0.1.0",
+      "commit": "54f25e9ea5e2040b064eb2b0b9007ffa20e9832f",
+      "description": "AgentMaurice MCP server for hybrid search on Meilisearch. It returns passages",
+      "sidecar_compatible": true,
+      "one_compatible": false,
+      "one_notes": "Needs a dedicated Meilisearch engine.",
+      "requires": [
+        "meilisearch"
+      ],
+      "install_image": "ghcr.io/agentmaurice/mcp/search-sidecar:v0.1.0",
+      "images": [
+        {
+          "name": "search-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/search-sidecar:v0.1.0",
+          "role": "sidecar"
+        }
+      ],
+      "tools": [
+        {
+          "name": "search_health_v1",
+          "description": "Vérifier la disponibilité du moteur"
+        },
+        {
+          "name": "search_capabilities_v1",
+          "description": "Décrire le corpus autorisé et les modes"
+        },
+        {
+          "name": "search_query_v1",
+          "description": "Rechercher des passages par mots-clés et sens"
+        },
+        {
+          "name": "search_get_v1",
+          "description": "Lire un passage cité dans le même périmètre"
+        }
+      ],
+      "tags": [
+        "search",
+        "hybrid",
+        "meilisearch",
+        "preview"
+      ]
+    },
+    {
+      "slug": "sidecar",
+      "kind": "runtime",
+      "version": "v0.1.0",
+      "commit": "8c9861350d162d8434a7e1ac924e714042d8ac4e",
+      "description": "Runtime sidecar des serveurs MCP AgentMaurice : un binaire Go autonome qui",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": null,
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/mcp-sidecar:v0.1.0",
+      "images": [
+        {
+          "name": "mcp-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/mcp-sidecar:v0.1.0",
+          "role": "sidecar"
+        },
+        {
+          "name": "mcp-sidecar-python",
+          "ref": "ghcr.io/agentmaurice/mcp/mcp-sidecar-python:v0.1.0",
+          "role": "sidecar"
+        },
+        {
+          "name": "mcp-sidecar-node",
+          "ref": "ghcr.io/agentmaurice/mcp/mcp-sidecar-node:v0.1.0",
+          "role": "sidecar"
+        },
+        {
+          "name": "mcp-sidecar-go",
+          "ref": "ghcr.io/agentmaurice/mcp/mcp-sidecar-go:v0.1.0",
+          "role": "sidecar"
+        },
+        {
+          "name": "mcp-sidecar-docker",
+          "ref": "ghcr.io/agentmaurice/mcp/mcp-sidecar-docker:v0.1.0",
+          "role": "sidecar"
+        }
+      ],
+      "tools": [],
+      "tags": []
+    },
+    {
+      "slug": "ssh",
+      "kind": "server",
+      "version": "v0.1.1",
+      "commit": "72060a0aaa807ee1b8e698a167efada999c8e598",
+      "description": "Go MCP server for governed remote administration over published SSH targets.",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": null,
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/ssh-sidecar:v0.1.1",
+      "images": [
+        {
+          "name": "ssh-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/ssh-sidecar:v0.1.1",
+          "role": "sidecar"
+        }
+      ],
+      "tools": [
+        {
+          "name": "ssh_health_v1",
+          "description": "Check the SSH server, target projection and credential-provider boundary"
+        },
+        {
+          "name": "ssh_capabilities_v1",
+          "description": "Describe SSH functions, limits, mode and target revision"
+        },
+        {
+          "name": "ssh_targets_v1",
+          "description": "List visible published SSH targets with redacted metadata"
+        },
+        {
+          "name": "ssh_target_check_v1",
+          "description": "Verify DNS, host key and handshake for a known Build target"
+        },
+        {
+          "name": "ssh_session_open_v1",
+          "description": "Open a bounded connection to one published target"
+        },
+        {
+          "name": "ssh_exec_v1",
+          "description": "Execute one synchronous command without PTY or persistent shell state"
+        },
+        {
+          "name": "ssh_session_status_v1",
+          "description": "Read bounded session status and expiry"
+        },
+        {
+          "name": "ssh_session_close_v1",
+          "description": "Close a session and destroy its in-memory connection state"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "remote",
+        "operations",
+        "legacy",
+        "governed"
+      ]
+    },
+    {
+      "slug": "system",
+      "kind": "server",
+      "version": "v0.1.2",
+      "commit": "13e75885e429531d2a0cbe408a89de86b33c2f18",
+      "description": "MCP System gives AgentMaurice Agents bounded primitives to diagnose the VM that",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": null,
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/system-sidecar:v0.1.2",
+      "images": [
+        {
+          "name": "system-host-agent",
+          "ref": "ghcr.io/agentmaurice/mcp/system-host-agent:v0.1.2",
+          "role": "standalone"
+        },
+        {
+          "name": "system-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/system-sidecar:v0.1.2",
+          "role": "sidecar"
+        }
+      ],
+      "tools": [
+        {
+          "name": "system_health_v1",
+          "description": "Check the local System host agent boundary"
+        },
+        {
+          "name": "system_capabilities_v1",
+          "description": "Describe diagnostics, allowlisted actions and mutation policy"
+        },
+        {
+          "name": "system_inspect_v1",
+          "description": "Inspect bounded host health metrics"
+        },
+        {
+          "name": "system_services_v1",
+          "description": "List administrator-allowlisted service states"
+        },
+        {
+          "name": "system_logs_v1",
+          "description": "Read bounded redacted logs for an allowlisted service"
+        },
+        {
+          "name": "system_action_plan_v1",
+          "description": "Create a short-lived hashed action plan"
+        },
+        {
+          "name": "system_action_apply_v1",
+          "description": "Apply one valid action plan under an administrator standing grant"
+        }
+      ],
+      "tags": [
+        "system",
+        "vm",
+        "diagnostics",
+        "operations",
+        "governed"
+      ]
+    }
+  ]
+}
