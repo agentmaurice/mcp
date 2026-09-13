@@ -28,7 +28,7 @@ Last sync: 2026-09-13.
 | [moderator](moderator) | v1.0.1 | `ghcr.io/agentmaurice/mcp/moderator*:v1.0.1` | Go-based MCP server that exposes a moderation tool powered by the Mistral API. It uses the official MCP Go SDK for modern stateless Streamab |
 | [observe](observe) | v0.1.3 | `ghcr.io/agentmaurice/mcp/observe*:v0.1.3` | Bounded and redacted runtime trace normalization, comparison and deterministic diagnostics. |
 | [ocr](ocr) | v0.1.2 | `ghcr.io/agentmaurice/mcp/ocr*:v0.1.2` | Managed, synchronous OCR MCP server. The service holds no provider key: it |
-| [rag](rag) | v1.0.16 | `ghcr.io/agentmaurice/mcp/rag*:v1.0.16` | A production-ready RAG (Retrieval-Augmented Generation) server implementing the Model Context Protocol (MCP). |
+| [rag](rag) | v1.0.18 | `ghcr.io/agentmaurice/mcp/rag*:v1.0.18` | A production-ready RAG (Retrieval-Augmented Generation) server implementing the Model Context Protocol (MCP). |
 | [search](search) | v0.1.0 | `ghcr.io/agentmaurice/mcp/search*:v0.1.0` | Recherche hybride Meilisearch et passages citables. Configuration opérateur requise : moteur séparé, clé search et processus dédié à un principal/corpus homogène en droits. |
 | [shared](shared) | main | — | Go module shared by the AgentMaurice MCP servers. |
 | [sidecar](sidecar) | v0.1.0 | `ghcr.io/agentmaurice/mcp/sidecar*:v0.1.0` | Runtime sidecar des serveurs MCP AgentMaurice : un binaire Go autonome qui |

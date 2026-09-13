@@ -1,6 +1,6 @@
 {
   "schema_version": "agentmaurice.mcp-catalog/v1",
-  "generated_at": "2026-09-13T14:38:33Z",
+  "generated_at": "2026-09-13T15:37:21Z",
   "repository": "https://github.com/agentmaurice/mcp",
   "registry": "ghcr.io/agentmaurice/mcp",
   "servers": [
@@ -418,8 +418,8 @@
     {
       "slug": "rag",
       "kind": "server",
-      "version": "v1.0.16",
-      "commit": "18a1b9405be16bda93ff97329ae76095f8ec35d8",
+      "version": "v1.0.18",
+      "commit": "e3c23013a00374c6bb820d7db21105b1d8e962e7",
       "description": "A production-ready RAG (Retrieval-Augmented Generation) server implementing the Model Context Protocol (MCP).",
       "sidecar_compatible": true,
       "one_compatible": false,
@@ -429,16 +429,16 @@
         "qdrant",
         "llm"
       ],
-      "install_image": "ghcr.io/agentmaurice/mcp/rag-sidecar:v1.0.16",
+      "install_image": "ghcr.io/agentmaurice/mcp/rag-sidecar:v1.0.18",
       "images": [
         {
           "name": "rag",
-          "ref": "ghcr.io/agentmaurice/mcp/rag:v1.0.16",
+          "ref": "ghcr.io/agentmaurice/mcp/rag:v1.0.18",
           "role": "standalone"
         },
         {
           "name": "rag-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/rag-sidecar:v1.0.16",
+          "ref": "ghcr.io/agentmaurice/mcp/rag-sidecar:v1.0.18",
           "role": "sidecar"
         }
       ],
