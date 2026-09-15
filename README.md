@@ -31,7 +31,6 @@ Last sync: 2026-09-13.
 | [shared](shared) | main | — | Go module shared by the AgentMaurice MCP servers. |
 | [sidecar](sidecar) | v0.1.0 | `ghcr.io/agentmaurice/mcp/sidecar*:v0.1.0` | Runtime sidecar des serveurs MCP AgentMaurice : un binaire Go autonome qui |
 | [ssh](ssh) | v0.1.1 | `ghcr.io/agentmaurice/mcp/ssh*:v0.1.1` | Governed synchronous SSH administration over pre-published remote targets with strict host-key verification. |
-| [system](system) | v0.1.2 | `ghcr.io/agentmaurice/mcp/system*:v0.1.2` | Bounded VM diagnostics and governed allowlisted system actions through a local Unix-socket host agent. |
 
 `shared` is the common library used by the other servers; it is not a
 server by itself.

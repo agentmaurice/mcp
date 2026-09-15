@@ -16,7 +16,6 @@
     "search": {"version": "v0.1.0", "ref": "refs/tags/v0.1.0", "commit": "54f25e9ea5e2040b064eb2b0b9007ffa20e9832f"},
     "shared": {"version": "", "ref": "origin/main", "commit": "9a165b0cdce300dcd8617e0f69130adc076c4474"},
     "sidecar": {"version": "v0.1.0", "ref": "refs/tags/v0.1.0", "commit": "8c9861350d162d8434a7e1ac924e714042d8ac4e"},
-    "ssh": {"version": "v0.1.1", "ref": "refs/tags/v0.1.1", "commit": "72060a0aaa807ee1b8e698a167efada999c8e598"},
-    "system": {"version": "v0.1.2", "ref": "refs/tags/v0.1.2", "commit": "13e75885e429531d2a0cbe408a89de86b33c2f18"}
+    "ssh": {"version": "v0.1.1", "ref": "refs/tags/v0.1.1", "commit": "72060a0aaa807ee1b8e698a167efada999c8e598"}
   }
 }

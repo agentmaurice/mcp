@@ -548,67 +548,6 @@
         "legacy",
         "governed"
       ]
-    },
-    {
-      "slug": "system",
-      "kind": "server",
-      "version": "v0.1.2",
-      "commit": "13e75885e429531d2a0cbe408a89de86b33c2f18",
-      "description": "MCP System gives AgentMaurice Agents bounded primitives to diagnose the VM that",
-      "sidecar_compatible": true,
-      "one_compatible": true,
-      "one_notes": null,
-      "requires": [],
-      "install_image": "ghcr.io/agentmaurice/mcp/system-sidecar:v0.1.2",
-      "images": [
-        {
-          "name": "system-host-agent",
-          "ref": "ghcr.io/agentmaurice/mcp/system-host-agent:v0.1.2",
-          "role": "standalone"
-        },
-        {
-          "name": "system-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/system-sidecar:v0.1.2",
-          "role": "sidecar"
-        }
-      ],
-      "tools": [
-        {
-          "name": "system_health_v1",
-          "description": "Check the local System host agent boundary"
-        },
-        {
-          "name": "system_capabilities_v1",
-          "description": "Describe diagnostics, allowlisted actions and mutation policy"
-        },
-        {
-          "name": "system_inspect_v1",
-          "description": "Inspect bounded host health metrics"
-        },
-        {
-          "name": "system_services_v1",
-          "description": "List administrator-allowlisted service states"
-        },
-        {
-          "name": "system_logs_v1",
-          "description": "Read bounded redacted logs for an allowlisted service"
-        },
-        {
-          "name": "system_action_plan_v1",
-          "description": "Create a short-lived hashed action plan"
-        },
-        {
-          "name": "system_action_apply_v1",
-          "description": "Apply one valid action plan under an administrator standing grant"
-        }
-      ],
-      "tags": [
-        "system",
-        "vm",
-        "diagnostics",
-        "operations",
-        "governed"
-      ]
     }
   ]
 }
