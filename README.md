@@ -22,10 +22,8 @@ Last sync: 2026-09-13.
 | [browser](browser) | v1.0.29 | `ghcr.io/agentmaurice/mcp/browser*:v1.0.29` | A Model Context Protocol (MCP) server for browser automation, built in Go. This server enables AI agents to control a web browser through a  |
 | [data](data) | v0.1.3 | `ghcr.io/agentmaurice/mcp/data*:v0.1.3` | Deterministic profiling, closed-plan querying and export of bounded CSV and tabular JSON data. |
 | [document](document) | v0.1.1 | `ghcr.io/agentmaurice/mcp/document*:v0.1.1` | MCP Document converts office documents to Markdown locally for AgentMaurice |
-| [filesearch](filesearch) | v0.1.0 | `ghcr.io/agentmaurice/mcp/filesearch*:v0.1.0` | Go-based MCP server that provides file search capabilities using Google Gemini FileSearch API. It is designed to plug into MCPChatUI and fol |
 | [guard](guard) | v0.1.3 | `ghcr.io/agentmaurice/mcp/guard*:v0.1.3` | Local detection, redaction and classification of PII, secrets and sensitive business data. |
 | [memory](memory) | v1.0.14 | `ghcr.io/agentmaurice/mcp/memory*:v1.0.14` | MCP server providing a multi-tenant, read-safe SQL memory backed by DuckDB or PostgreSQL. Writes are handled by strict ingestion tools (no a |
-| [moderator](moderator) | v1.0.1 | `ghcr.io/agentmaurice/mcp/moderator*:v1.0.1` | Go-based MCP server that exposes a moderation tool powered by the Mistral API. It uses the official MCP Go SDK for modern stateless Streamab |
 | [observe](observe) | v0.1.3 | `ghcr.io/agentmaurice/mcp/observe*:v0.1.3` | Bounded and redacted runtime trace normalization, comparison and deterministic diagnostics. |
 | [ocr](ocr) | v0.1.2 | `ghcr.io/agentmaurice/mcp/ocr*:v0.1.2` | Managed, synchronous OCR MCP server. The service holds no provider key: it |
 | [rag](rag) | v1.0.18 | `ghcr.io/agentmaurice/mcp/rag*:v1.0.18` | A production-ready RAG (Retrieval-Augmented Generation) server implementing the Model Context Protocol (MCP). |
@@ -51,7 +49,7 @@ run in production by AgentMaurice.
 Two kinds of images exist:
 
 - **standalone** images (for example `memory-duckdb`, `memory-postgres`,
-  `brain`, `browser`, `rag`, `filesearch`, `moderator`) run the server alone,
+  `brain`, `browser`, `rag`) run the server alone,
   over stdio or HTTP, for any MCP client;
 - **`-sidecar`** images bundle the server with the AgentMaurice
   **MCP sidecar runtime**, which registers the server to an AgentMaurice
