@@ -16,7 +16,7 @@ require (
 	github.com/eko/gocache/store/ristretto/v4 v4.3.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/lib/pq v1.10.9
-	github.com/mark3labs/mcp-go v0.43.1
+	github.com/mark3labs/mcp-go v0.43.2
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/nats-io/nats.go v1.40.0
 	github.com/qdrant/go-client v1.16.2

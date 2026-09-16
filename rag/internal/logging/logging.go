@@ -44,13 +44,13 @@ func NewWithConfig(cfg Config) (*zap.Logger, error) {
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
 
-	// Create console encoder for stdout
+	// Keep stdout exclusively for MCP protocol messages in STDIO mode.
 	consoleEncoder := zapcore.NewJSONEncoder(encoderConfig)
 
 	// Console output core
 	consoleCore := zapcore.NewCore(
 		consoleEncoder,
-		zapcore.AddSync(os.Stdout),
+		zapcore.AddSync(os.Stderr),
 		zapLevel,
 	)
 

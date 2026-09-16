@@ -29,6 +29,11 @@ func (m *StdioManager) Name() string {
 	return "mcp-stdio"
 }
 
+// Done closes when the client disconnects or the STDIO transport stops.
+func (m *StdioManager) Done() <-chan struct{} {
+	return m.done
+}
+
 func (m *StdioManager) Start(ctx context.Context) error {
 	if m.server == nil || m.server.GetStdioServer() == nil {
 		return nil

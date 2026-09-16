@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -441,7 +442,9 @@ func (w *IngestWorker) processClaimedJob(job *ent.IngestJob) error {
 				zap.String("title", source.Title),
 				zap.Int("chunk_index", i),
 				zap.Error(err))
-			continue
+			msg := fmt.Sprintf("failed to generate embedding for chunk %d: %v", i, err)
+			statusErr := w.jobRepo.UpdateStatus(w.ctx, job.ID, ingestjob.StatusFailed, msg, 0)
+			return errors.Join(shared.ErrInternal(msg, err), statusErr)
 		}
 
 		var embInt8 []int8
@@ -520,10 +523,6 @@ func (w *IngestWorker) processClaimedJob(job *ent.IngestJob) error {
 			EmbeddingBinary: chunk.EmbeddingBinary,
 		})
 
-		if w.binaryIndex != nil && len(chunk.EmbeddingBinary) > 0 {
-			w.binaryIndex.Add(chunkID.String(), chunk.EmbeddingBinary, job.TenantID.String())
-		}
-
 		validChunks = append(validChunks, shared.Chunk{
 			ID:         chunkID.String(),
 			DocumentID: created.ID,
@@ -542,6 +541,34 @@ func (w *IngestWorker) processClaimedJob(job *ent.IngestJob) error {
 		w.jobRepo.UpdateStatus(w.ctx, job.ID, ingestjob.StatusFailed, err.Error(), 0)
 		_ = w.docRepo.Delete(w.ctx, created.ID)
 		return err
+	}
+
+	// Update progress
+	w.jobRepo.UpdateStatus(w.ctx, job.ID, ingestjob.StatusRunning, "", 80)
+
+	// Store in vector store
+	if err := w.vectorStore.Upsert(w.ctx, validChunks); err != nil {
+		return w.failPersistedIngestion(job.ID, created.ID, validChunks, fmt.Errorf("failed to upsert to vector store: %w", err))
+	}
+
+	// Update progress
+	w.jobRepo.UpdateStatus(w.ctx, job.ID, ingestjob.StatusRunning, "", 90)
+
+	// Update vector IDs in database
+	for _, chunk := range validChunks {
+		if chunk.ID != "" {
+			chunkID, _ := xid.FromString(chunk.ID)
+			if err := w.chunkRepo.UpdateVectorID(w.ctx, chunkID, chunk.ID); err != nil {
+				return w.failPersistedIngestion(job.ID, created.ID, validChunks, fmt.Errorf("failed to persist vector ID: %w", err))
+			}
+		}
+	}
+
+	// Publish auxiliary indexes only after all chunks have been persisted.
+	for _, chunk := range entChunks {
+		if w.binaryIndex != nil && len(chunk.EmbeddingBinary) > 0 {
+			w.binaryIndex.Add(chunk.ID.String(), chunk.EmbeddingBinary, job.TenantID.String())
+		}
 	}
 
 	// Upsert doc-level embedding for semantic duplicate detection (only after chunks are stored)
@@ -564,28 +591,10 @@ func (w *IngestWorker) processClaimedJob(job *ent.IngestJob) error {
 		}
 	}
 
-	// Update progress
-	w.jobRepo.UpdateStatus(w.ctx, job.ID, ingestjob.StatusRunning, "", 80)
-
-	// Store in vector store
-	if err := w.vectorStore.Upsert(w.ctx, validChunks); err != nil {
-		w.logger.Warn("failed to upsert to vector store", zap.Error(err))
-		// Don't fail the job, chunks are in DB
+	// Mark as completed only after the mandatory writes succeeded.
+	if err := w.jobRepo.UpdateStatus(w.ctx, job.ID, ingestjob.StatusCompleted, "", 100); err != nil {
+		return err
 	}
-
-	// Update progress
-	w.jobRepo.UpdateStatus(w.ctx, job.ID, ingestjob.StatusRunning, "", 90)
-
-	// Update vector IDs in database
-	for _, chunk := range validChunks {
-		if chunk.ID != "" {
-			chunkID, _ := xid.FromString(chunk.ID)
-			w.chunkRepo.UpdateVectorID(w.ctx, chunkID, chunk.ID)
-		}
-	}
-
-	// Mark as completed
-	w.jobRepo.UpdateStatus(w.ctx, job.ID, ingestjob.StatusCompleted, "", 100)
 
 	// Invalidate cache for the tenant (new documents may affect search results)
 	if w.queryCache != nil && w.queryCache.IsEnabled() {
@@ -602,6 +611,30 @@ func (w *IngestWorker) processClaimedJob(job *ent.IngestJob) error {
 		zap.Int("chunks", len(chunks)))
 
 	return nil
+}
+
+// failPersistedIngestion removes this job's incomplete document so a retry is not
+// skipped as a duplicate. Remote cleanup is best effort; failures remain visible
+// in the job message and returned error, never as a completed ingestion.
+func (w *IngestWorker) failPersistedIngestion(jobID, documentID xid.ID, chunks []shared.Chunk, cause error) error {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(w.ctx), 10*time.Second)
+	defer cancel()
+	ids := make([]string, len(chunks))
+	for i, chunk := range chunks {
+		ids[i] = chunk.ID
+	}
+	vectorCtx, stopVectorCleanup := context.WithTimeout(ctx, 3*time.Second)
+	defer stopVectorCleanup()
+	if err := w.vectorStore.Delete(vectorCtx, ids); err != nil {
+		cause = errors.Join(cause, fmt.Errorf("vector cleanup failed: %w", err))
+	}
+	if err := w.chunkRepo.DeleteByDocument(ctx, documentID); err != nil {
+		cause = errors.Join(cause, fmt.Errorf("chunk cleanup failed: %w", err))
+	} else if err := w.docRepo.Delete(ctx, documentID); err != nil {
+		cause = errors.Join(cause, fmt.Errorf("document cleanup failed: %w", err))
+	}
+	statusErr := w.jobRepo.UpdateStatus(ctx, jobID, ingestjob.StatusFailed, cause.Error(), 0)
+	return errors.Join(cause, statusErr)
 }
 
 type reindexPayload struct {

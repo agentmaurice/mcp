@@ -46,6 +46,7 @@ type App struct {
 	entClient *ent.Client
 	managers  []shared.Manager
 	ingestQ   jobqueue.IngestJobQueue
+	stdioDone <-chan struct{}
 }
 
 // New creates a new App
@@ -151,7 +152,11 @@ func (a *App) Initialize(ctx context.Context, transportMode string) error {
 	if runAPI {
 		managers = append(managers, ragManager, ingestManager, mcpServer)
 		if supportsSTDIOTransport(transportMode) {
-			managers = append(managers, mcptransport.NewStdioManager(mcpServer, a.logger))
+			stdio := mcptransport.NewStdioManager(mcpServer, a.logger)
+			managers = append(managers, stdio)
+			if normalizeTransportMode(transportMode) == "stdio" {
+				a.stdioDone = stdio.Done()
+			}
 		}
 		if supportsHTTPTransport(transportMode) && httpServer != nil {
 			managers = append(managers, httpServer)
@@ -234,12 +239,15 @@ func (a *App) Run(ctx context.Context, transportMode string) error {
 	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
 
 	select {
 	case sig := <-sigChan:
 		a.logger.Info("received shutdown signal", zap.String("signal", sig.String()))
 	case <-ctx.Done():
 		a.logger.Info("context cancelled")
+	case <-a.stdioDone:
+		a.logger.Info("STDIO client disconnected")
 	}
 
 	// Stop

@@ -46,7 +46,7 @@ services:
       VECTORSTORE_COLLECTION: rag_chunks
       VECTORSTORE_DESTRUCTIVE_MIGRATION: "true"
       LLM_PROVIDER: openai
-      LLM_API_KEY: eyJhbGciOiJFZERTQSIsImtpZCI6IjgzMkFGNUE5ODg3MzFCMDNGM0EzMTRFMDJFRUJFRjBGNDE5MUY0Q0YiLCJraW5kIjoicGF0IiwidHlwIjoiSldUIn0.eyJ0b2tlbiI6InBkRWt0YlBPQmdvb2haUEhUR1Z1UFZicEVybGhRbWFTVjAycnZSTy96ZUE9In0.H-qtyB1VGvhGscegvOj2iDGrprCOmOKlxJtYqxetswASCVN_2ZYBCiPlgfdB8woQ2YfUqpyORtv1lkVmjgEyDg
+      LLM_API_KEY: ${LLM_API_KEY:?Set LLM_API_KEY for the selected provider}
       LLM_BASE_URL: https://oai.endpoints.kepler.ai.cloud.ovh.net/v1
       LLM_MODEL: Mistral-Small-3.2-24B-Instruct-2506
       LLM_EMBEDDING_MODEL: bge-m3

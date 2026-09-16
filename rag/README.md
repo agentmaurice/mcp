@@ -1,6 +1,6 @@
 # RAG MCP Server
 
-A production-ready RAG (Retrieval-Augmented Generation) server implementing the Model Context Protocol (MCP).
+A standalone RAG (Retrieval-Augmented Generation) server implementing the Model Context Protocol (MCP). Use it to ingest a document corpus and answer questions with source citations. It requires PostgreSQL, Qdrant and an embedding/generation provider; it is distinct from document conversion and simple full-text search.
 
 ## Features
 
@@ -79,7 +79,7 @@ curl -X POST http://localhost:8084/api/ingest \
 
 ### Prerequisites
 
-- Go 1.23+
+- Go 1.26 (see `go.mod`)
 - Docker & Docker Compose
 - PostgreSQL 16+
 - Qdrant vector database
@@ -87,36 +87,111 @@ curl -X POST http://localhost:8084/api/ingest \
 
 ### Installation
 
-1. Clone the repository
-2. Copy environment file:
-   ```bash
-   cp .env.example .env
-   ```
-3. Edit `.env` and set your OpenAI API key
+Clone the complete MCP repository so that `rag/` and `shared/` remain siblings.
+From `rag/`, start from the example configuration and compile without changing
+the dependency manifest:
+
+```bash
+cp configs/config.example.json configs/config.json
+GOWORK=off go build -mod=readonly -o rag ./cmd/rag
+```
+
+Configure dedicated PostgreSQL and Qdrant instances before starting the server.
+Do not run migrations against an existing production database for a smoke test.
+Export credentials through your shell or secret manager; the published snapshot
+contains no `.env.example`, and the binary does not automatically load `.env`.
+
+```bash
+export DATABASE_DSN='postgres://rag:rag@127.0.0.1:5432/rag?sslmode=disable'
+export DATABASE_AUTO_MIGRATE=true
+export VECTORSTORE_URL='http://127.0.0.1:6334'
+export VECTORSTORE_COLLECTION='rag_smoke'
+export LLM_PROVIDER=openai
+export LLM_BASE_URL='https://api.openai.com/v1'
+export LLM_EMBEDDING_DIM=1536
+export LLM_MODEL='gpt-4o-mini'
+export LLM_EMBEDDING_MODEL='text-embedding-3-small'
+# Supply LLM_API_KEY securely for your chosen provider.
+```
+
+### Running locally
+
+```bash
+./rag -transport stdio
+```
+
+The default transport is `sse`; `-transport both` enables HTTP and STDIO.
+See `configs/config.json` and the configuration section below for HTTP binding.
+`task migrate` is not provided: `DATABASE_AUTO_MIGRATE=true` applies migrations
+at startup. Ingestion and generation require working dependencies and may incur
+provider charges; successful compilation alone does not qualify those operations.
+
+### Qualification through AgentMaurice One
+
+Use One's explicit MCP installation with `go -C /absolute/path/to/rag run
+-mod=readonly ./cmd/rag -transport stdio`. Keep `rag/` and `shared/` siblings
+and set `GOWORK=off`. The automatic catalogue installation does not provision
+RAG's external services. `APP_ROLE=all` runs both API and ingestion worker;
+`APP_ROLE=api` (the sidecar image default) requires a separate worker on the
+same database and vector collections, otherwise jobs remain pending.
+Logs go to stderr; stdout is reserved for JSON-RPC. In STDIO-only mode, client
+disconnection stops the application and its ingestion worker. In `both` mode,
+HTTP remains active until normal shutdown.
+
+The reproducible [One qualification script](scripts/qualify_one.py) creates an
+isolated test Agent, installs RAG, ingests synthetic text, polls with a deadline,
+checks the citation and tenant isolation, purges the data, then injects a real
+Qdrant write failure by deleting its own collection. It removes its Agent and
+collections on exit. Supply a **disposable database and Qdrant**: the database
+is migrated and test tenants/interactions can remain until the database is removed.
+
+With a local One already running and a configuration pointing to it:
+
+```bash
+docker run -d --name rag-qualification-postgres -p 127.0.0.1:18543:5432 \
+  -e POSTGRES_USER=ragtest -e POSTGRES_PASSWORD=ragtest-local-only \
+  -e POSTGRES_DB=ragtest postgres:16.10-alpine
+docker run -d --name rag-qualification-qdrant \
+  -p 127.0.0.1:18633:6333 -p 127.0.0.1:18634:6334 qdrant/qdrant:v1.16.2
+python3 scripts/qualify_one.py \
+  --maurice /absolute/path/to/maurice --config /absolute/path/to/one-test.yaml \
+  --source "$PWD" \
+  --database-dsn 'postgres://ragtest:ragtest-local-only@127.0.0.1:18543/ragtest?sslmode=disable' \
+  --output /tmp/rag-one-report.json
+docker rm -fv rag-qualification-postgres rag-qualification-qdrant
+```
+
+The script returns zero only when all checks and Agent cleanup succeed. It uses
+real PostgreSQL and Qdrant with a deterministic local LLM fixture; it does not
+qualify a hosted provider, production load, API/worker separation, NATS delivery,
+Buffer, or every document format. Repeat provider and deployment-specific checks
+before promoting an image to production.
+
+### Ingestion failure semantics and existing installations
+
+`completed` requires successful embeddings for every chunk, a successful chunk
+write to Qdrant and persisted vector IDs. A failed mandatory write produces
+`failed` with a diagnostic message; an embedding failure aborts before document
+creation. A vector write failure triggers cleanup of that job's chunks/document
+so it can be resubmitted after recovery. Cleanup errors are included in the job
+message and require reconciliation if Qdrant was unavailable. PostgreSQL and
+Qdrant do not share a transaction. Semantic duplicate embeddings remain optional
+and are not covered by the mandatory chunk-write guarantee.
+
+Older versions could silently skip chunks whose embeddings failed, or mark an
+entire ingestion completed after Qdrant rejected its write. This correction
+does not repair historical data automatically. Identify the deployed commit or
+image digest, compare document/chunk counts with Qdrant, and validate citations
+on representative documents. Restoring missing chunks requires reingestion from
+the original source; reindexing existing chunks cannot restore discarded text.
+Keep a backup and scope any repair to the affected tenant/document.
 
 ### Running with Docker Compose
 
-```bash
-task compose-up
-```
-
-This starts:
-- PostgreSQL (port 5432)
-- Qdrant (port 6333)
-- RAG Server (port 8080)
-
-### Running Locally
-
-```bash
-# Install dependencies
-task install
-
-# Run database migrations
-task migrate
-
-# Run the server
-task run
-```
+The optional Compose example requires `LLM_API_KEY` in its environment. Inspect
+its provider URL, model, ports and volume configuration before using it; changing
+the key alone does not select a different provider. No credential is bundled.
+Use dedicated test volumes and remove only those volumes when finished.
 
 ### Migrations / interaction logging
 
@@ -247,10 +322,10 @@ Content-Type: application/json
   "answer": "RAG (Retrieval-Augmented Generation) is...",
   "citations": [
     {
-      "chunk_id": "abc123",
-      "document_id": "doc456",
-      "snippet": "...relevant text excerpt...",
-      "metadata": {
+      "ChunkID": "abc123",
+      "DocumentID": "doc456",
+      "Snippet": "...relevant text excerpt...",
+      "Metadata": {
         "document_title": "Introduction to RAG",
         "author": "John Doe",
         "section_type": "content"
@@ -260,7 +335,9 @@ Content-Type: application/json
 }
 ```
 
-**Note:** The `metadata` field in citations contains:
+**Note:** Citation fields currently use `ChunkID`, `DocumentID`, `Snippet` and
+`Metadata` (capitalized). Keep this wire contract when integrating existing clients.
+The `Metadata` field contains:
 - `document_title`: Title of the source document
 - Any custom metadata provided during ingestion via `source_metadata`
 - `section_type`, `level`: Internal chunking metadata
@@ -341,7 +418,30 @@ fetch('http://your-server:8084/mcp/message', {
 
 ### MCP Tools
 
-The server exposes 12 MCP tools. The three core workflow tools are documented below; clients can retrieve the complete deterministic catalogue with `tools/list`.
+The server exposes 12 MCP tools. Retrieve their exact argument schemas with
+`tools/list` before calling them.
+
+| Tool | When to use it |
+|------|----------------|
+| `rag_ingest_start` | Add text or a document URL to a tenant corpus; returns an asynchronous job ID. |
+| `rag_ingest_status` | Poll a job until `completed` or `failed`; `pending`/`running` is not a success. |
+| `rag_query` | Answer a corpus question with source citations. |
+| `rag_list_tenants` | Discover tenants for a deployment. |
+| `rag_list_documents` | Inspect ingested documents, metadata and pagination. |
+| `rag_check_document` | Check for an existing/duplicate document before ingestion. |
+| `rag_scan_document` | Inspect content for sensitive information according to a detection profile. |
+| `rag_extract_document_text` | Return stored chunk text for a document or metadata filter. |
+| `rag_score_document` | Score a document against supplied criteria using the LLM. |
+| `rag_compare_documents` | Compare two full documents to assess whether they describe the same candidate/profile. |
+| `rag_reindex_embeddings` | Rebuild embeddings after an explicit model/retrieval change; creates a job. |
+| `rag_purge_tenant` | Remove a tenant's corpus and jobs; preview with `dry_run`, then `confirm=true`. |
+
+Corpus tools require a `deployment_id` (xid). `tenant_id` accepts a tenant xid
+or a name scoped to that deployment; omission uses the default tenant.
+Use the same identifiers for ingestion, query and cleanup. These identifiers
+provide data scoping, not authentication: keep authorization in the trusted
+calling application/gateway and do not expose the service to untrusted callers.
+The three core workflow tools are detailed below.
 
 #### rag_query
 
@@ -350,7 +450,8 @@ Execute a RAG query to retrieve and generate answers.
 **Input Schema:**
 ```json
 {
-  "tenant_id": "string (required) - Tenant ID for multi-tenant isolation",
+  "deployment_id": "string (required) - Deployment xid",
+  "tenant_id": "string (optional) - Tenant xid or name; default tenant when omitted",
   "query": "string (required) - The question to answer",
   "max_tokens": "number (optional) - Maximum tokens for response"
 }
@@ -361,7 +462,7 @@ Execute a RAG query to retrieve and generate answers.
 {
   "answer": "RAG stands for...",
   "citations": [
-    {"chunk_id": "...", "document_id": "...", "snippet": "..."}
+    {"ChunkID": "...", "DocumentID": "...", "Snippet": "..."}
   ]
 }
 ```
@@ -373,7 +474,8 @@ Start ingesting a document into the knowledge base. Provide either `content` or 
 **Input Schema:**
 ```json
 {
-  "tenant_id": "string (required) - Tenant ID for multi-tenant isolation",
+  "deployment_id": "string (required) - Deployment xid",
+  "tenant_id": "string (optional) - Tenant xid or name; default tenant when omitted",
   "title": "string (required) - Document title",
   "content": "string (required if url not provided) - Document content (text)",
   "url": "string (required if content not provided) - URL to fetch content from",
@@ -454,7 +556,7 @@ curl -s -X POST http://localhost:8084/api/query \
 ## Configuration
 
 Configuration can be provided via:
-1. `configs/rag.json` file
+1. `configs/config.json` file
 2. Environment variables (override file config)
 
 ### Environment Variables
@@ -463,7 +565,7 @@ Configuration can be provided via:
 |----------|----------|---------|-------------|
 | `LLM_API_KEY` | Yes | - | OpenAI API key for embeddings and generation |
 | `DATABASE_DSN` | Yes | - | PostgreSQL connection string |
-| `VECTOR_STORE_URL` | Yes | - | Qdrant URL (e.g., `http://localhost:6333`) |
+| `VECTORSTORE_URL` | Yes | - | Qdrant URL (e.g., `http://localhost:6333`) |
 | `SERVER_ADDRESS` | No | `:8084` | Server bind address |
 | `LOGGING_LEVEL` | No | `info` | Log level (`debug`, `info`, `warn`, `error`) |
 
@@ -477,8 +579,8 @@ LLM_API_KEY=sk-your-openai-api-key
 DATABASE_DSN=postgres://rag:rag@localhost:5432/rag?sslmode=disable
 
 # Vector Store
-VECTOR_STORE_URL=http://localhost:6333
-VECTOR_STORE_COLLECTION=rag_documents
+VECTORSTORE_URL=http://localhost:6333
+VECTORSTORE_COLLECTION=rag_documents
 
 # Server
 SERVER_ADDRESS=:8084
@@ -644,7 +746,7 @@ services:
     environment:
       - LLM_API_KEY=${LLM_API_KEY}
       - DATABASE_DSN=postgres://rag:rag@postgres:5432/rag?sslmode=disable
-      - VECTOR_STORE_URL=http://qdrant:6333
+      - VECTORSTORE_URL=http://qdrant:6333
       - SERVER_ADDRESS=:8084
     depends_on:
       - postgres

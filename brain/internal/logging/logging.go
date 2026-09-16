@@ -47,7 +47,7 @@ func NewWithConfig(cfg Config) (*zap.Logger, error) {
 	consoleEncoder := zapcore.NewJSONEncoder(encoderConfig)
 	consoleCore := zapcore.NewCore(
 		consoleEncoder,
-		zapcore.AddSync(os.Stdout),
+		zapcore.AddSync(os.Stderr),
 		zapLevel,
 	)
 
