@@ -6,6 +6,7 @@ use (
 	./brain
 	./browser
 	./data
+	./decision
 	./guard
 	./memory
 	./observe

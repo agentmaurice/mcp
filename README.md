@@ -10,7 +10,7 @@ private GitLab repositories, and every tagged release is synchronised here
 Issues and pull requests are welcome; maintainers will port accepted changes
 upstream and re-publish.
 
-Last sync: 2026-09-16.
+Last sync: 2026-09-17.
 
 ## Servers
 
@@ -21,6 +21,7 @@ Last sync: 2026-09-16.
 | [brain](brain) | v1.1.6 | `ghcr.io/agentmaurice/mcp/brain*:v1.1.6` | Go MCP server that indexes an organization's knowledge (code, documentation, |
 | [browser](browser) | v1.0.29 | `ghcr.io/agentmaurice/mcp/browser*:v1.0.29` | A Model Context Protocol (MCP) server for browser automation, built in Go. This server enables AI agents to control a web browser through a  |
 | [data](data) | v0.1.3 | `ghcr.io/agentmaurice/mcp/data*:v0.1.3` | Deterministic profiling, closed-plan querying and export of bounded CSV and tabular JSON data. |
+| [decision](decision) | v0.1.0 | `ghcr.io/agentmaurice/mcp/decision*:v0.1.0` | Classify, score and evaluate yes/no questions over short content with TypeSafe System One. Returns typed values and confidence; never executes branches or writes. Requires a TypeSafe API credential. |
 | [document](document) | v0.1.1 | `ghcr.io/agentmaurice/mcp/document*:v0.1.1` | MCP Document converts office documents to Markdown locally for AgentMaurice |
 | [guard](guard) | v0.1.3 | `ghcr.io/agentmaurice/mcp/guard*:v0.1.3` | Local detection, redaction and classification of PII, secrets and sensitive business data. |
 | [memory](memory) | v1.0.15 | `ghcr.io/agentmaurice/mcp/memory*:v1.0.15` | MCP server providing a multi-tenant, read-safe SQL memory backed by DuckDB or PostgreSQL. Writes are handled by strict ingestion tools (no a |

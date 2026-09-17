@@ -1,0 +1,8 @@
+/bin/
+/artifacts/
+.env*
+/pwd/
+/coverage.out
+
+__pycache__/
+*.pyc

@@ -1,6 +1,6 @@
 {
   "schema_version": "agentmaurice.mcp-catalog/v1",
-  "generated_at": "2026-09-16T13:48:18Z",
+  "generated_at": "2026-09-17T08:58:31Z",
   "repository": "https://github.com/agentmaurice/mcp",
   "registry": "ghcr.io/agentmaurice/mcp",
   "servers": [
@@ -204,6 +204,60 @@
         "json",
         "analytics",
         "export"
+      ]
+    },
+    {
+      "slug": "decision",
+      "kind": "server",
+      "version": "v0.1.0",
+      "commit": "66394166d94a20d7cefcb8f8389de8b61765dfc2",
+      "description": "Classify short, already extracted content, score it on an ordered scale, or ask a yes/no question using TypeSafe System One. Receive typed values and confidence without parsing generated prose. This server never executes a branch or writes to another system.",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": "Requires a TypeSafe API key and sends the provided state to TypeSafe. Provider charges may apply. Native STDIO qualified through One.",
+      "requires": [
+        "typesafe-api",
+        "typesafe-api-key"
+      ],
+      "install_image": "ghcr.io/agentmaurice/mcp/decision-sidecar:v0.1.0",
+      "images": [
+        {
+          "name": "decision-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/decision-sidecar:v0.1.0",
+          "role": "sidecar"
+        }
+      ],
+      "tools": [
+        {
+          "name": "decision_health_v1",
+          "description": "Check local readiness without provider calls"
+        },
+        {
+          "name": "decision_capabilities_v1",
+          "description": "Describe question types, bounds and confidence"
+        },
+        {
+          "name": "decision_ask_v1",
+          "description": "Evaluate multiple questions in one provider call"
+        },
+        {
+          "name": "decision_choice_v1",
+          "description": "Choose a category with an uncertainty threshold"
+        },
+        {
+          "name": "decision_score_v1",
+          "description": "Score ordered levels, returning null below the threshold"
+        },
+        {
+          "name": "decision_noul_v1",
+          "description": "Evaluate the probability of yes"
+        }
+      ],
+      "tags": [
+        "decision",
+        "classification",
+        "scoring",
+        "typesafe"
       ]
     },
     {
