@@ -12,7 +12,6 @@ import (
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/storage"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	officialmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"go.uber.org/zap"
 )
 
@@ -24,8 +23,8 @@ const (
 // Server builds MCP server and transports.
 type Server struct {
 	mcpServer    *server.MCPServer
+	modernServer *server.MCPServer
 	sseServer    *server.SSEServer
-	modernServer *officialmcp.Server
 	streamable   http.Handler
 	stdioServer  *server.StdioServer
 	storage      storage.Manager
@@ -56,11 +55,14 @@ func (s *Server) Build() error {
 		server.WithLogging(),
 		server.WithInstructions(buildInstructions()),
 	)
-	s.modernServer = newModernMCPServer(serviceName, serviceVersion, buildInstructions())
 
+	modernServer := server.NewMCPServer(serviceName, serviceVersion, server.WithToolCapabilities(false), server.WithPromptCapabilities(false), server.WithResourceCapabilities(false, false), server.WithCacheHints(0, mcp.CacheScopePublic), server.WithInstructions(buildInstructions()))
 	s.registerTools(mcpServer)
 	s.registerResources(mcpServer)
+	s.registerTools(modernServer)
+	s.registerResources(modernServer)
 	s.mcpServer = mcpServer
+	s.modernServer = modernServer
 
 	basePath := s.cfg.Server.BasePath
 	if basePath == "" {
@@ -79,10 +81,7 @@ func (s *Server) Build() error {
 	}))
 
 	s.sseServer = server.NewSSEServer(mcpServer, sseOptions...)
-	modernHandler := officialmcp.NewStreamableHTTPHandler(
-		func(*http.Request) *officialmcp.Server { return s.modernServer },
-		&officialmcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true},
-	)
+	modernHandler := server.NewStreamableHTTPServer(modernServer, server.WithStateLess(true), server.WithEndpointPath(basePath), server.WithDisableStreaming(true))
 	s.streamable = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		identity := shared.IdentityFromRequest(r, s.cfg.Storage.DefaultTenantID)
 		ctx := shared.ContextWithIdentity(r.Context(), identity)
@@ -166,9 +165,20 @@ func (s *Server) registerTools(mcpServer *server.MCPServer) {
 
 	for _, tool := range tools {
 		definition := tool.Definition()
+		if definition.RawInputSchema == nil {
+			if raw, err := json.Marshal(definition.InputSchema); err == nil {
+				var schema map[string]any
+				if json.Unmarshal(raw, &schema) == nil {
+					schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
+					if raw, err = json.Marshal(schema); err == nil {
+						definition.RawInputSchema = raw
+						definition.InputSchema = mcp.ToolInputSchema{}
+					}
+				}
+			}
+		}
 		handler := s.wrapToolHandler(tool.Name(), tool.Handler())
 		mcpServer.AddTool(definition, handler)
-		s.modernServer.AddTool(toOfficialTool(definition), adaptToolHandler(handler))
 	}
 
 	s.logger.Info("registered MCP tools", zap.Int("count", len(tools)))

@@ -17,9 +17,9 @@ import (
 	"github.com/agentmaurice/mcpchatui/mcp/rag/internal/shared"
 	"github.com/agentmaurice/mcpchatui/mcp/rag/internal/storage/db/ent"
 	"github.com/agentmaurice/mcpchatui/mcp/rag/internal/storage/repository"
+	"github.com/agentmaurice/mcpchatui/mcp/shared/modernmcp"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	officialmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/rs/xid"
 	"github.com/yosida95/uritemplate/v3"
 	"go.uber.org/zap"
@@ -34,7 +34,7 @@ const (
 type Server struct {
 	mcpServer       *server.MCPServer
 	sseServer       *server.SSEServer
-	modernServer    *officialmcp.Server
+	modernServer    *modernmcp.Server
 	modernHandler   http.Handler
 	stdioServer     *server.StdioServer
 	ragManager      *business.RAGManager
@@ -130,10 +130,7 @@ func (s *Server) Build() error {
 	}
 
 	s.sseServer = server.NewSSEServer(mcpServer, options...)
-	s.modernHandler = officialmcp.NewStreamableHTTPHandler(
-		func(*http.Request) *officialmcp.Server { return modernServer },
-		&officialmcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true},
-	)
+	s.modernHandler = modernServer.Handler()
 	s.stdioServer = server.NewStdioServer(mcpServer)
 
 	s.logger.Info("MCP SSE server built",

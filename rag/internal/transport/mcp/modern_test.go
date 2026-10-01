@@ -13,7 +13,6 @@ import (
 	"github.com/agentmaurice/mcpchatui/mcp/rag/internal/shared"
 	legacymcp "github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	officialmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/yosida95/uritemplate/v3"
 	"go.uber.org/zap"
 )
@@ -51,10 +50,7 @@ func TestModernHTTPProtocol(t *testing.T) {
 			},
 		))
 	}
-	handler := officialmcp.NewStreamableHTTPHandler(
-		func(*http.Request) *officialmcp.Server { return modernServer },
-		&officialmcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true},
-	)
+	handler := modernServer.Handler()
 
 	t.Run("discover", func(t *testing.T) {
 		status, header, response := postMCP(t, handler, modernProtocolVersion, "server/discover", "", map[string]any{
@@ -270,7 +266,7 @@ func TestAdaptToolHandlerSupportsAnyJSONStructuredContent(t *testing.T) {
 		}
 		result, err := adaptToolHandler(server.ToolHandlerFunc(legacyHandler))(
 			context.Background(),
-			&officialmcp.CallToolRequest{Params: &officialmcp.CallToolParamsRaw{Name: "test", Arguments: json.RawMessage(`{}`)}},
+			legacymcp.CallToolRequest{Params: legacymcp.CallToolParams{Name: "test", Arguments: map[string]any{}}},
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -287,7 +283,7 @@ func TestAdaptToolHandlerPromotesJSONText(t *testing.T) {
 		}
 		result, err := adaptToolHandler(server.ToolHandlerFunc(legacyHandler))(
 			context.Background(),
-			&officialmcp.CallToolRequest{Params: &officialmcp.CallToolParamsRaw{Name: "test", Arguments: json.RawMessage(`{}`)}},
+			legacymcp.CallToolRequest{Params: legacymcp.CallToolParams{Name: "test", Arguments: map[string]any{}}},
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -313,10 +309,7 @@ func TestAdaptResourceHandler(t *testing.T) {
 			}}, nil
 		},
 	))
-	handler := officialmcp.NewStreamableHTTPHandler(
-		func(*http.Request) *officialmcp.Server { return modernServer },
-		&officialmcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true},
-	)
+	handler := modernServer.Handler()
 
 	status, _, response := postMCP(t, handler, modernProtocolVersion, "resources/read", "rag://test/one", map[string]any{
 		"_meta": modernMeta(modernProtocolVersion), "uri": "rag://test/one",
@@ -408,7 +401,7 @@ func assertCompleteCacheable(t *testing.T, result map[string]any) {
 	}
 }
 
-func assertStructuredValue(t *testing.T, result *officialmcp.CallToolResult, want any) {
+func assertStructuredValue(t *testing.T, result *legacymcp.CallToolResult, want any) {
 	t.Helper()
 	data, err := json.Marshal(result)
 	if err != nil {
@@ -432,7 +425,7 @@ func assertStructuredValue(t *testing.T, result *officialmcp.CallToolResult, wan
 	}
 }
 
-func mustOfficialResult(t *testing.T, result *legacymcp.CallToolResult) *officialmcp.CallToolResult {
+func mustOfficialResult(t *testing.T, result *legacymcp.CallToolResult) *legacymcp.CallToolResult {
 	t.Helper()
 	converted, err := toOfficialToolResult(result)
 	if err != nil {

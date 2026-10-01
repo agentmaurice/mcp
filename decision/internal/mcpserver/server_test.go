@@ -12,7 +12,8 @@ import (
 	"time"
 
 	"github.com/agentmaurice/mcpchatui/mcp/decision/pkg/systemone"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/mcp"
 )
 
 func TestHTTPTransportsAndTools(t *testing.T) {
@@ -45,24 +46,35 @@ func TestHTTPTransportsAndTools(t *testing.T) {
 				_ = json.NewEncoder(w).Encode(map[string]any{"model": "jev-latest", "answers": answers, "usage": map[string]int{"input_tokens": 10, "output_tokens": 20}})
 			}))
 			defer provider.Close()
-			client, e := systemone.New(systemone.Config{APIKey: "secret", URL: provider.URL})
+			evaluator, e := systemone.New(systemone.Config{APIKey: "secret", URL: provider.URL})
 			if e != nil {
 				t.Fatal(e)
 			}
-			srv := httptest.NewServer(Handler(New(client, "test")))
+			srv := httptest.NewServer(Handler(New(evaluator, "test")))
 			defer srv.Close()
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			var tr mcp.Transport = &mcp.StreamableClientTransport{Endpoint: srv.URL + "/mcp"}
+			var session *client.Client
 			if transport == "sse" {
-				tr = &mcp.SSEClientTransport{Endpoint: srv.URL + "/sse"}
+				session, e = client.NewSSEMCPClient(srv.URL + "/sse")
+			} else {
+				session, e = client.NewStreamableHttpClient(srv.URL + "/mcp")
 			}
-			session, e := mcp.NewClient(&mcp.Implementation{Name: "qualification", Version: "test"}, nil).Connect(ctx, tr, nil)
 			if e != nil {
 				t.Fatal(e)
 			}
+			if e = session.Start(ctx); e != nil {
+				t.Fatal(e)
+			}
+			if _, e = session.Initialize(ctx, mcp.InitializeRequest{Params: mcp.InitializeParams{
+				ProtocolVersion: mcp.LATEST_PROTOCOL_VERSION,
+				Capabilities:    mcp.ClientCapabilities{},
+				ClientInfo:      mcp.Implementation{Name: "decision-test", Version: "1.0.0"},
+			}}); e != nil {
+				t.Fatal(e)
+			}
 			defer session.Close()
-			tools, e := session.ListTools(ctx, nil)
+			tools, e := session.ListTools(ctx, mcp.ListToolsRequest{})
 			if e != nil {
 				t.Fatal(e)
 			}
@@ -72,7 +84,7 @@ func TestHTTPTransportsAndTools(t *testing.T) {
 			names := map[string]bool{}
 			for _, tool := range tools.Tools {
 				names[tool.Name] = true
-				if tool.Description == "" || tool.InputSchema == nil || tool.Annotations == nil || !tool.Annotations.ReadOnlyHint {
+				if tool.Description == "" || tool.InputSchema.Type == "" || tool.Annotations.ReadOnlyHint == nil || !*tool.Annotations.ReadOnlyHint {
 					t.Fatalf("incomplete tool %s", tool.Name)
 				}
 			}
@@ -83,7 +95,7 @@ func TestHTTPTransportsAndTools(t *testing.T) {
 			}
 			call := func(name string, args any) *mcp.CallToolResult {
 				t.Helper()
-				out, e := session.CallTool(ctx, &mcp.CallToolParams{Name: "decision_" + name + "_v1", Arguments: args})
+				out, e := session.CallTool(ctx, mcp.CallToolRequest{Params: mcp.CallToolParams{Name: "decision_" + name + "_v1", Arguments: args}})
 				if e != nil {
 					t.Fatal(e)
 				}

@@ -10,9 +10,9 @@ import (
 	"github.com/agentmaurice/mcpchatui/mcp/brain/internal/search"
 	"github.com/agentmaurice/mcpchatui/mcp/brain/internal/shared"
 	"github.com/agentmaurice/mcpchatui/mcp/brain/internal/storage"
+	"github.com/agentmaurice/mcpchatui/mcp/shared/modernmcp"
 	mcplib "github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	officialmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"go.uber.org/zap"
 )
 
@@ -25,7 +25,7 @@ const (
 type Server struct {
 	mcpServer    *server.MCPServer
 	sseServer    *server.SSEServer
-	modernServer *officialmcp.Server
+	modernServer *modernmcp.Server
 	streamable   http.Handler
 	stdioServer  *server.StdioServer
 	storage      storage.Manager
@@ -66,10 +66,7 @@ func (s *Server) Build() error {
 
 	s.registerTools(mcpServer)
 	s.mcpServer = mcpServer
-	modernHandler := officialmcp.NewStreamableHTTPHandler(
-		func(*http.Request) *officialmcp.Server { return s.modernServer },
-		&officialmcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true},
-	)
+	modernHandler := s.modernServer.Handler()
 	s.streamable = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		identity := shared.IdentityFromRequest(r, s.cfg.Storage.DefaultTenantID)
 		ctx := shared.ContextWithIdentity(r.Context(), identity)

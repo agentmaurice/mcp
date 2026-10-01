@@ -14,7 +14,6 @@ import (
 	"github.com/agentmaurice/mcpchatui/mcp/brain/internal/shared"
 	legacymcp "github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	officialmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"go.uber.org/zap"
 )
 
@@ -226,8 +225,8 @@ func TestBrainAdapterPreservesAnyJSON(t *testing.T) {
 				StructuredContent: value,
 			}, nil
 		})
-		result, err := adaptToolHandler(handler)(context.Background(), &officialmcp.CallToolRequest{
-			Params: &officialmcp.CallToolParamsRaw{Name: "test", Arguments: json.RawMessage(`{}`)},
+		result, err := adaptToolHandler(handler)(context.Background(), legacymcp.CallToolRequest{
+			Params: legacymcp.CallToolParams{Name: "test", Arguments: map[string]any{}},
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -324,7 +323,7 @@ func assertBrainCacheable(t *testing.T, result map[string]any) {
 	}
 }
 
-func assertBrainStructuredValue(t *testing.T, result *officialmcp.CallToolResult, want any) {
+func assertBrainStructuredValue(t *testing.T, result *legacymcp.CallToolResult, want any) {
 	t.Helper()
 	wire := marshalBrainMap(t, result)
 	got, present := wire["structuredContent"]

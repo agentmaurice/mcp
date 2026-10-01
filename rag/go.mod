@@ -16,8 +16,7 @@ require (
 	github.com/eko/gocache/store/ristretto/v4 v4.3.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/lib/pq v1.10.9
-	github.com/mark3labs/mcp-go v0.43.2
-	github.com/modelcontextprotocol/go-sdk v1.7.0
+	github.com/mark3labs/mcp-go v1.1.1
 	github.com/nats-io/nats.go v1.40.0
 	github.com/qdrant/go-client v1.16.2
 	github.com/redis/go-redis/v9 v9.13.0
@@ -63,6 +62,7 @@ require (
 	github.com/prometheus/common v0.67.4 // indirect
 	github.com/prometheus/procfs v0.19.2 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
@@ -74,7 +74,7 @@ require (
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/zclconf/go-cty v1.14.4 // indirect
 	github.com/zclconf/go-cty-yaml v1.1.0 // indirect
-	go.uber.org/multierr v1.10.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/crypto v0.44.0 // indirect
 	golang.org/x/exp v0.0.0-20251209150349-8475f28825e9 // indirect

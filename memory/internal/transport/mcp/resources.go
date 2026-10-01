@@ -9,6 +9,7 @@ import (
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/security"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/shared"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/storage"
+	modernmcp "github.com/agentmaurice/mcpchatui/mcp/shared/modernmcp"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"go.uber.org/zap"
@@ -26,7 +27,6 @@ func (s *Server) redactResourceMap(m map[string]any) {
 
 // registerResources registers MCP resources.
 func (s *Server) registerResources(mcpServer *server.MCPServer) {
-	// Register resource templates for dynamic resources
 	s.addResourceTemplate(mcpServer,
 		mcp.NewResourceTemplate(
 			"memory://entities/{entity_type}",
@@ -36,7 +36,6 @@ func (s *Server) registerResources(mcpServer *server.MCPServer) {
 		),
 		s.handleEntitiesResource,
 	)
-
 	s.addResourceTemplate(mcpServer,
 		mcp.NewResourceTemplate(
 			"memory://entity/{entity_id}",
@@ -46,7 +45,6 @@ func (s *Server) registerResources(mcpServer *server.MCPServer) {
 		),
 		s.handleEntityResource,
 	)
-
 	s.addResourceTemplate(mcpServer,
 		mcp.NewResourceTemplate(
 			"memory://facts/{fact_type}",
@@ -56,7 +54,6 @@ func (s *Server) registerResources(mcpServer *server.MCPServer) {
 		),
 		s.handleFactsResource,
 	)
-
 	s.addResourceTemplate(mcpServer,
 		mcp.NewResourceTemplate(
 			"memory://documents",
@@ -66,7 +63,6 @@ func (s *Server) registerResources(mcpServer *server.MCPServer) {
 		),
 		s.handleDocumentsResource,
 	)
-
 	s.addResourceTemplate(mcpServer,
 		mcp.NewResourceTemplate(
 			"memory://views",
@@ -82,7 +78,6 @@ func (s *Server) registerResources(mcpServer *server.MCPServer) {
 
 func (s *Server) addResourceTemplate(mcpServer *server.MCPServer, definition mcp.ResourceTemplate, handler server.ResourceTemplateHandlerFunc) {
 	mcpServer.AddResourceTemplate(definition, handler)
-	s.modernServer.AddResourceTemplate(toOfficialResourceTemplate(definition), adaptResourceHandler(server.ResourceHandlerFunc(handler)))
 }
 
 // handleEntitiesResource handles memory://entities/{entity_type} requests
@@ -204,7 +199,7 @@ func (s *Server) handleEntityResource(ctx context.Context, request mcp.ReadResou
 	}
 	if len(qr.Rows) == 0 {
 		s.logger.Warn("entity not found", zap.String("entity_id", entityID))
-		return nil, fmt.Errorf("%w: %s", errEntityResourceNotFound, entityID)
+		return nil, fmt.Errorf("%w: %w: %s", modernmcp.ErrResourceNotFound, errEntityResourceNotFound, entityID)
 	}
 
 	row := qr.Rows[0]

@@ -4,22 +4,21 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/config"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/shared"
 	legacymcp "github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
-	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
-	officialmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"go.uber.org/zap"
 )
 
 const modernProtocolVersion = "2026-07-28"
+const jsonSchema202012 = "https://json-schema.org/draft/2020-12/schema"
 
 func TestMemoryModernHTTPProtocol(t *testing.T) {
 	cfg := &config.Config{
@@ -31,15 +30,25 @@ func TestMemoryModernHTTPProtocol(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	memoryServer.modernServer.AddTool(&officialmcp.Tool{
-		Name:        "test.identity",
-		InputSchema: map[string]any{"type": "object", "$schema": jsonSchema202012},
-	}, func(ctx context.Context, _ *officialmcp.CallToolRequest) (*officialmcp.CallToolResult, error) {
+	memoryServer.mcpServer.AddTool(legacymcp.Tool{
+		Name: "test.identity", RawInputSchema: json.RawMessage(`{"type":"object","$schema":"https://json-schema.org/draft/2020-12/schema"}`),
+	}, func(ctx context.Context, _ legacymcp.CallToolRequest) (*legacymcp.CallToolResult, error) {
 		identity := shared.IdentityFromContext(ctx)
-		return &officialmcp.CallToolResult{
-			Content:           []officialmcp.Content{&officialmcp.TextContent{Text: identity.TenantID}},
+		return &legacymcp.CallToolResult{
+			Content:           []legacymcp.Content{legacymcp.NewTextContent(identity.TenantID)},
 			StructuredContent: map[string]any{"tenant": identity.TenantID},
 		}, nil
+	})
+	memoryServer.modernServer.AddTool(legacymcp.Tool{Name: "test.identity", RawInputSchema: json.RawMessage(`{"type":"object","$schema":"https://json-schema.org/draft/2020-12/schema"}`)}, func(ctx context.Context, _ legacymcp.CallToolRequest) (*legacymcp.CallToolResult, error) {
+		identity := shared.IdentityFromContext(ctx)
+		return &legacymcp.CallToolResult{Content: []legacymcp.Content{legacymcp.NewTextContent(identity.TenantID)}, StructuredContent: map[string]any{"tenant": identity.TenantID}}, nil
+	})
+	memoryServer.modernServer.AddResource(legacymcp.Resource{
+		URI: "memory://test-content", Name: "Test content", MIMEType: "application/json",
+	}, func(_ context.Context, request legacymcp.ReadResourceRequest) ([]legacymcp.ResourceContents, error) {
+		return []legacymcp.ResourceContents{legacymcp.TextResourceContents{
+			URI: request.Params.URI, MIMEType: "application/json", Text: `{"status":"ok"}`,
+		}}, nil
 	})
 	handler := memoryServer.Streamable()
 
@@ -123,13 +132,16 @@ func TestMemoryModernHTTPProtocol(t *testing.T) {
 		if len(templates) != 5 {
 			t.Fatalf("len(resourceTemplates) = %d, want 5", len(templates))
 		}
-		previous := ""
+		// mcp-go orders templates by display name; validate deterministic membership
+		// by comparing the sorted URI set rather than imposing URI ordering.
+		uris := make([]string, 0, len(templates))
 		for _, item := range templates {
 			uri := anyMemoryMap(t, item)["uriTemplate"].(string)
-			if uri < previous {
-				t.Fatalf("resource templates are not sorted: %q before %q", previous, uri)
-			}
-			previous = uri
+			uris = append(uris, uri)
+		}
+		sort.Strings(uris)
+		if !reflect.DeepEqual(uris, []string{"memory://documents", "memory://entities/{entity_type}", "memory://entity/{entity_id}", "memory://facts/{fact_type}", "memory://views"}) {
+			t.Fatalf("resource templates changed: %v", uris)
 		}
 	})
 
@@ -144,6 +156,26 @@ func TestMemoryModernHTTPProtocol(t *testing.T) {
 		}
 		if got := memoryResponseErrorCode(t, response); got != -32602 {
 			t.Fatalf("error code = %d, want -32602", got)
+		}
+	})
+
+	t.Run("resource content is returned", func(t *testing.T) {
+		uri := "memory://test-content"
+		status, _, response := postMemoryMCP(t, handler, modernProtocolVersion, "resources/read", uri, map[string]any{
+			"_meta": modernMemoryMeta(modernProtocolVersion),
+			"uri":   uri,
+		}, nil)
+		if status != http.StatusOK {
+			t.Fatalf("status = %d, response = %#v", status, response)
+		}
+		result := memoryResponseResult(t, response)
+		contents := anyMemorySlice(t, result["contents"])
+		if len(contents) != 1 {
+			t.Fatalf("len(contents) = %d, want 1", len(contents))
+		}
+		content := anyMemoryMap(t, contents[0])
+		if content["uri"] != uri || content["mimeType"] != "application/json" || content["text"] != `{"status":"ok"}` {
+			t.Fatalf("resource content = %#v", content)
 		}
 	})
 
@@ -213,60 +245,41 @@ func assertMemoryStaticCapabilities(t *testing.T, result map[string]any) {
 }
 
 func TestMemoryAdaptersPreserveJSONAndResources(t *testing.T) {
-	t.Run("structured content", func(t *testing.T) {
-		values := []any{map[string]any{"ok": true}, []any{"a", float64(2)}, "value", float64(42), true, json.RawMessage("null")}
-		for _, value := range values {
-			handler := server.ToolHandlerFunc(func(context.Context, legacymcp.CallToolRequest) (*legacymcp.CallToolResult, error) {
-				return &legacymcp.CallToolResult{Content: []legacymcp.Content{legacymcp.NewTextContent("ok")}, StructuredContent: value}, nil
-			})
-			result, err := adaptToolHandler(handler)(context.Background(), &officialmcp.CallToolRequest{
-				Params: &officialmcp.CallToolParamsRaw{Name: "test", Arguments: json.RawMessage(`{}`)},
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			wire := marshalMemoryMap(t, result)
-			got, present := wire["structuredContent"]
-			if !present {
-				t.Fatalf("structuredContent absent for %T", value)
-			}
-			var want any
-			encoded, _ := json.Marshal(value)
-			_ = json.Unmarshal(encoded, &want)
-			if !reflect.DeepEqual(got, want) {
-				t.Fatalf("structuredContent = %#v, want %#v", got, want)
-			}
+	server := NewServer(nil, &config.Config{Server: config.ServerConfig{BasePath: "/mcp"}, Storage: config.StorageConfig{DefaultTenantID: "default-tenant"}}, NewResponseWrapper(nil, zap.NewNop()), zap.NewNop())
+	if err := server.Build(); err != nil {
+		t.Fatal(err)
+	}
+	values := []any{map[string]any{"ok": true}, []any{"a", 2}, "value", 42, true, json.RawMessage("null")}
+	for i, value := range values {
+		name := fmt.Sprintf("test.structured.%d", i)
+		server.modernServer.AddTool(legacymcp.Tool{Name: name, RawInputSchema: json.RawMessage(`{"type":"object"}`)}, func(_ context.Context, _ legacymcp.CallToolRequest) (*legacymcp.CallToolResult, error) {
+			return &legacymcp.CallToolResult{StructuredContent: value}, nil
+		})
+		_, _, response := postMemoryMCP(t, server.Streamable(), modernProtocolVersion, "tools/call", name, map[string]any{"_meta": modernMemoryMeta(modernProtocolVersion), "name": name, "arguments": map[string]any{}}, nil)
+		result := memoryResponseResult(t, response)
+		got, ok := result["structuredContent"]
+		if !ok {
+			t.Fatalf("structuredContent absent for %T", value)
 		}
-	})
-
-	t.Run("resource contents", func(t *testing.T) {
-		handler := server.ResourceHandlerFunc(func(_ context.Context, request legacymcp.ReadResourceRequest) ([]legacymcp.ResourceContents, error) {
-			return []legacymcp.ResourceContents{legacymcp.TextResourceContents{URI: request.Params.URI, MIMEType: "application/json", Text: `{"ok":true}`}}, nil
-		})
-		result, err := adaptResourceHandler(handler)(context.Background(), &officialmcp.ReadResourceRequest{
-			Params: &officialmcp.ReadResourceParams{URI: "memory://documents"},
-		})
+		var wantDecoded, gotDecoded any
+		wantJSON, err := json.Marshal(value)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(result.Contents) != 1 || result.Contents[0].URI != "memory://documents" || result.Contents[0].Text != `{"ok":true}` {
-			t.Fatalf("unexpected resource result: %#v", result.Contents)
+		if err := json.Unmarshal(wantJSON, &wantDecoded); err != nil {
+			t.Fatal(err)
 		}
-	})
-
-	t.Run("resource not found error", func(t *testing.T) {
-		handler := server.ResourceHandlerFunc(func(context.Context, legacymcp.ReadResourceRequest) ([]legacymcp.ResourceContents, error) {
-			return nil, errEntityResourceNotFound
-		})
-		_, err := adaptResourceHandler(handler)(context.Background(), &officialmcp.ReadResourceRequest{
-			Params: &officialmcp.ReadResourceParams{URI: "memory://entity/missing"},
-		})
-		var rpcErr *jsonrpc.Error
-		if !errors.As(err, &rpcErr) || rpcErr.Code != officialmcp.CodeResourceNotFound {
-			t.Fatalf("error = %#v, want resource not found code %d", err, officialmcp.CodeResourceNotFound)
+		gotJSON, err := json.Marshal(got)
+		if err != nil {
+			t.Fatal(err)
 		}
-	})
-
+		if err := json.Unmarshal(gotJSON, &gotDecoded); err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(gotDecoded, wantDecoded) {
+			t.Fatalf("structuredContent = %#v, want %#v", gotDecoded, wantDecoded)
+		}
+	}
 	t.Run("response wrapper", func(t *testing.T) {
 		wrapper := NewResponseWrapper(nil, zap.NewNop())
 		for _, value := range []any{map[string]any{"ok": true}, []any{"a"}, "value", float64(1), true, nil} {

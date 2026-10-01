@@ -338,3 +338,127 @@ func TestConfiguration(t *testing.T) {
 		}
 	}
 }
+
+func TestRoundedScoreResponseFromJev(t *testing.T) {
+	req := Request{State: raw("Synthetic news article"), Questions: map[string]Question{"quality": {Type: "score", Instructions: "Writing quality", Criteria: raw([]string{"Low", "Medium", "High"})}}}
+	for _, tc := range []struct {
+		score float64
+		valid bool
+	}{{0.27, true}, {0.25, true}, {1.5, false}} {
+		wire := map[string]any{"model": "jev-1.13.0", "usage": map[string]any{"input_tokens": 384, "output_tokens": 61}, "answers": map[string]any{"quality": map[string]any{"type": "score", "score": tc.score, "confidence": 0.56, "legend": map[string]string{"0": "Low", "1": "Medium", "2": "High"}, "probabilities": map[string]float64{"0": 0.76, "1": 0.22, "2": 0.02}}}}
+		result, err := decodeResult(raw(wire), req, "typesafe")
+		if (err == nil) != tc.valid {
+			t.Fatalf("score=%v valid=%v err=%v", tc.score, tc.valid, err)
+		}
+		if tc.valid && *result.Answers["quality"].Score != tc.score {
+			t.Fatal("provider score changed")
+		}
+	}
+}
+
+func TestHostedScopeAndRetryOwnership(t *testing.T) {
+	for _, hosted := range []bool{false, true} {
+		t.Run(fmt.Sprint(hosted), func(t *testing.T) {
+			var ids []string
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				ids = append(ids, r.Header.Get("X-Request-ID"))
+				if hosted && r.Header.Get("X-AgentMaurice-Instance-ID") != "instance-a" {
+					t.Error("instance scope missing")
+				}
+				w.WriteHeader(429)
+			}))
+			defer server.Close()
+			cfg := Config{APIKey: "fixture", URL: server.URL}
+			if hosted {
+				cfg.Provider = "agentmaurice"
+				cfg.InstanceID = "instance-a"
+				cfg.Model = "hosted:jev-latest"
+			}
+			client, err := New(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = client.Ask(context.Background(), request())
+			if err == nil {
+				t.Fatal("expected rate limit")
+			}
+			expected := 3
+			if hosted {
+				expected = 1
+			}
+			if len(ids) != expected {
+				t.Fatalf("attempts=%d want=%d", len(ids), expected)
+			}
+			for _, id := range ids {
+				if id == "" || id != ids[0] {
+					t.Fatal("request identity changed during retry")
+				}
+			}
+		})
+	}
+}
+
+func TestEndpointByProvider(t *testing.T) {
+	for _, tc := range []struct{ provider, base, want string }{
+		{"typesafe", "https://api.typesafe.ai", "https://api.typesafe.ai/v1/systemone"},
+		{"typesafe", "https://api.typesafe.ai/v1/systemone/", "https://api.typesafe.ai/v1/systemone"},
+		{"typesafe", "https://openrouter.ai/api", "https://openrouter.ai/api/v1/systemone"},
+		{"agentmaurice", "https://llm.agentmaurice.app", "https://llm.agentmaurice.app/v1/decisions"},
+		{"agentmaurice", "https://llm.agentmaurice.app/v1/systemone", "https://llm.agentmaurice.app/v1/decisions"},
+		{"agentmaurice", "https://llm.agentmaurice.app/v1/decisions/", "https://llm.agentmaurice.app/v1/decisions"},
+	} {
+		if got := endpointURL(tc.provider, tc.base); got != tc.want {
+			t.Errorf("%s %s: got %s want %s", tc.provider, tc.base, got, tc.want)
+		}
+	}
+}
+
+// The hosted rail serves the AgentMaurice decision contract on /v1/decisions:
+// the gateway names the resolved provider's confidence kind and the relay
+// keeps it, whereas the vendor API on /v1/systemone is calibrated by
+// construction and any kind it echoes is ignored.
+func TestHostedRailUsesDecisionsRouteAndGatewayConfidenceKind(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		kind  any
+		valid bool
+	}{{"calibrated", "calibrated", true}, {"self_reported", "self_reported", true}, {"none", "none", true}, {"missing", nil, false}, {"unknown", "guessed", false}} {
+		t.Run(tc.name, func(t *testing.T) {
+			var path string
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				path = r.URL.Path
+				var sent providerRequest
+				b, _ := io.ReadAll(r.Body)
+				if json.Unmarshal(b, &sent) != nil || sent.Model != "hosted:jev-latest" {
+					t.Error("hosted model code not sent")
+				}
+				v := response()
+				v["model"] = "jev-1.13"
+				a := v["answers"].(map[string]any)["kind"].(map[string]any)
+				if tc.kind != nil {
+					a["confidence_kind"] = tc.kind
+				}
+				a["via_fallback"] = false
+				send(w, v)
+			}))
+			defer server.Close()
+			c, err := New(Config{APIKey: "fixture", URL: server.URL, Provider: "agentmaurice", Model: "hosted:jev-latest"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			out, err := c.Ask(context.Background(), request())
+			if path != "/v1/decisions" {
+				t.Fatalf("hosted rail called %s", path)
+			}
+			if (err == nil) != tc.valid {
+				t.Fatalf("valid=%v err=%v", tc.valid, err)
+			}
+			if !tc.valid {
+				return
+			}
+			if out.Provider != "agentmaurice" || out.Model != "jev-1.13" || out.Answers["kind"].ConfidenceKind != tc.kind {
+				t.Fatalf("gateway contract not kept: %+v", out)
+			}
+		})
+	}
+}

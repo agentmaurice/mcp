@@ -58,3 +58,20 @@ func TestConfigurationRejectsNonPositiveLimits(t *testing.T) {
 		})
 	}
 }
+
+func TestHostedRelayUsesScopedKeyAndKeepsBYOKPrecedence(t *testing.T) {
+	v := viper.New()
+	v.Set("timeout", "5s")
+	v.Set("max_state_bytes", 32768)
+	v.Set("hosted_key", "scoped-fixture")
+	v.Set("model", "jev-latest")
+	cfg, err := configuration(v)
+	if err != nil || cfg.Provider != "agentmaurice" || cfg.URL != "https://llm.agentmaurice.app" || cfg.Model != "hosted:jev-latest" {
+		t.Fatalf("invalid hosted config: %v", err)
+	}
+	v.Set("typesafe_api_key", "byok-fixture")
+	cfg, err = configuration(v)
+	if err != nil || cfg.Provider != "typesafe" || cfg.APIKey != "byok-fixture" {
+		t.Fatal("BYOK precedence lost")
+	}
+}

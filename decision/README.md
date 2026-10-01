@@ -41,8 +41,11 @@ local readiness, not that TypeSafe has accepted the credential.
 |---|---|---|
 | `MCP_DECISION_TYPESAFE_API_KEY` | unset | Provider credential |
 | `MCP_DECISION_TYPESAFE_API_KEY_FILE` | unset | Alternative credential file |
-| `MCP_DECISION_TYPESAFE_URL` | `https://api.typesafe.ai` | Base URL or full `/v1/systemone`; HTTP only on loopback |
-| `MCP_DECISION_MODEL` | `jev-latest` | System One model |
+| `MCP_DECISION_HOSTED_KEY` | unset | Organization-scoped decisions usage key; used only without TypeSafe BYOK |
+| `MCP_DECISION_HOSTED_URL` | `https://llm.agentmaurice.app` | Hosted gateway base URL; the relay calls `/v1/decisions` on it |
+| `MCP_DECISION_HOSTED_INSTANCE_ID` | unset | Optional connected-instance identity when the hosted key is that instance’s secret |
+| `MCP_DECISION_TYPESAFE_URL` | `https://api.typesafe.ai` | Base URL or full `/v1/systemone`; HTTP only on loopback. `https://openrouter.ai/api` with an OpenRouter key works unchanged (same request and response shapes) |
+| `MCP_DECISION_MODEL` | `jev-latest` | Model id; `typesafe/jev-1.13` on OpenRouter, `hosted:jev-latest` or a pinned `hosted:jev-1.13` on the hosted route |
 | `MCP_DECISION_TIMEOUT` | `5s` | Total deadline including retries |
 | `MCP_DECISION_MAX_STATE_BYTES` | `32768` | Compact JSON byte limit, may be lowered |
 | `MCP_DECISION_TRANSPORT` | `stdio` | `stdio` or `http` |
@@ -120,3 +123,24 @@ References: [TypeSafe API](https://docs.typesafe.ai/api.md),
 [confidence semantics](https://docs.typesafe.ai/confidence.md).
 
 License: Apache-2.0.
+
+## Hosted decisions
+
+Set `MCP_DECISION_HOSTED_KEY` to the organization's dedicated decisions usage
+key issued by Console. The relay calls `POST /v1/decisions` on the gateway: a
+route named by category, not by vendor, that serves the AgentMaurice decision
+contract (`state`, typed `questions`, `answers` carrying `confidence_kind`).
+The gateway names the resolved provider's confidence kind and the relay keeps
+it as is; the vendor route stays `/v1/systemone`. The organization wallet pays
+for input tokens only, with the same credit formula as hosted LLM calls.
+TypeSafe BYOK takes precedence when configured.
+The gateway handles bounded provider retries, so the relay does not multiply
+those retries. A request ID is stable across transport attempts; a duplicate
+logical submission is rejected without another debit. Do not reuse a GoModel
+service key: it is not an organization-scoped System One credential.
+
+Hosted requests send `state` to the upstream decision provider (TypeSafe,
+United States, reached through the gateway's routing provider). Choose BYOK or
+avoid the hosted route when that processing location does not meet your needs.
+Provider metadata reports `agentmaurice` on this route. Health and capabilities
+do not call the provider or spend tokens.

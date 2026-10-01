@@ -11,9 +11,11 @@ import (
 )
 
 type Config struct {
-	TargetsFile     string
-	CredentialsFile string
-	Service         sshservice.Config
+	TargetsFile          string
+	CredentialsFile      string
+	VaultURL             string
+	VaultConsumerPrivB64 string
+	Service              sshservice.Config
 }
 
 func FromEnv() (Config, error) {
@@ -49,9 +51,11 @@ func FromEnv() (Config, error) {
 		return Config{}, err
 	}
 	return Config{
-		TargetsFile:     envOr("SSH_TARGETS_FILE", "/etc/agentmaurice/ssh-targets.json"),
-		CredentialsFile: strings.TrimSpace(os.Getenv("SSH_CREDENTIALS_FILE")),
-		Service:         service,
+		TargetsFile:          envOr("SSH_TARGETS_FILE", "/etc/agentmaurice/ssh-targets.json"),
+		CredentialsFile:      strings.TrimSpace(os.Getenv("SSH_CREDENTIALS_FILE")),
+		VaultURL:             strings.TrimSpace(os.Getenv("SSH_VAULT_URL")),
+		VaultConsumerPrivB64: strings.TrimSpace(os.Getenv("SSH_VAULT_CONSUMER_PRIV_B64")),
+		Service:              service,
 	}, nil
 }
 

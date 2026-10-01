@@ -9,10 +9,12 @@ import (
 	"net/http"
 
 	"github.com/agentmaurice/mcpchatui/mcp/decision/pkg/systemone"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 )
 
 type Evaluator interface {
+	Provider() string
 	Ask(context.Context, systemone.Request) (*systemone.Result, error)
 	Model() string
 	StateLimit() int
@@ -33,31 +35,33 @@ func decode(data []byte, out any) error {
 
 func result(v any, err error) (*mcp.CallToolResult, error) {
 	if err != nil {
-		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}}}, nil
+		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{mcp.NewTextContent(err.Error())}}, nil
 	}
 	b, e := json.Marshal(v)
 	if e != nil {
 		return nil, errors.New("cannot encode decision result")
 	}
-	return &mcp.CallToolResult{StructuredContent: v, Content: []mcp.Content{&mcp.TextContent{Text: string(b)}}}, nil
+	return &mcp.CallToolResult{StructuredContent: v, RawStructuredContent: b, Content: []mcp.Content{mcp.NewTextContent(string(b))}}, nil
 }
 
-func New(client Evaluator, version string) *mcp.Server {
-	s := mcp.NewServer(&mcp.Implementation{Name: "decision", Version: version}, &mcp.ServerOptions{Instructions: "Classify, score or evaluate a yes/no question over short, already extracted content. This server returns typed values and never executes a branch or write. Use min_confidence for consequential choices; uncertain means do not act automatically. Confidence calibration must be checked on your own labelled data."})
+func New(client Evaluator, version string) *server.MCPServer {
+	s := server.NewMCPServer("decision", version, server.WithInstructions("Classify, score or evaluate a yes/no question over short, already extracted content. This server returns typed values and never executes a branch or write. Use min_confidence for consequential choices; uncertain means do not act automatically. Confidence calibration must be checked on your own labelled data."))
 	add := func(name, description string, schema map[string]any, fn func(context.Context, json.RawMessage) (any, error)) {
 		no := false
-		s.AddTool(&mcp.Tool{Name: name, Description: description, InputSchema: schema, Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true, DestructiveHint: &no}}, func(ctx context.Context, r *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			v, e := fn(ctx, r.Params.Arguments)
+		readOnly := true
+		s.AddTool(mcp.Tool{Name: name, Description: description, RawInputSchema: mustJSON(schema), Annotations: mcp.ToolAnnotation{ReadOnlyHint: &readOnly, DestructiveHint: &no}}, func(ctx context.Context, r mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			args, _ := json.Marshal(r.Params.Arguments)
+			v, e := fn(ctx, args)
 			return result(v, e)
 		})
 	}
 	empty := object(map[string]any{}, nil)
-	add("decision_health_v1", "Check local server readiness without contacting TypeSafe or spending tokens.", empty, func(_ context.Context, b json.RawMessage) (any, error) {
+	add("decision_health_v1", "Check local server readiness without contacting the provider or spending tokens.", empty, func(_ context.Context, b json.RawMessage) (any, error) {
 		var v struct{}
 		if e := decode(b, &v); e != nil {
 			return nil, e
 		}
-		return map[string]any{"status": "ready", "provider": "typesafe", "model": client.Model()}, nil
+		return map[string]any{"status": "ready", "provider": client.Provider(), "model": client.Model()}, nil
 	})
 	add("decision_capabilities_v1", "Discover question types, bounds and confidence semantics before constructing a decision request.", empty, func(_ context.Context, b json.RawMessage) (any, error) {
 		var v struct{}
@@ -104,11 +108,14 @@ func New(client Evaluator, version string) *mcp.Server {
 	return s
 }
 
-func Handler(s *mcp.Server) http.Handler {
+func Handler(s *server.MCPServer) http.Handler {
 	mux := http.NewServeMux()
-	get := func(*http.Request) *mcp.Server { return s }
-	mux.Handle("/mcp", mcp.NewStreamableHTTPHandler(get, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}))
-	mux.Handle("/sse", mcp.NewSSEHandler(get, nil))
+	mux.Handle("/mcp", server.NewStreamableHTTPServer(s, server.WithStateLess(true), server.WithEndpointPath("/mcp")))
+	sse := server.NewSSEServer(s)
+	mux.Handle("/sse", sse)
+	// mcp-go's SSE transport advertises a separate /message endpoint for
+	// requests after the event stream is established.
+	mux.Handle("/message", sse)
 	for _, path := range []string{"/health", "/ready"} {
 		mux.HandleFunc("GET "+path, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -119,6 +126,14 @@ func Handler(s *mcp.Server) http.Handler {
 		r.Body = http.MaxBytesReader(w, r.Body, 4*1024*1024)
 		mux.ServeHTTP(w, r)
 	})
+}
+
+func mustJSON(v any) json.RawMessage {
+	b, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }
 
 func object(properties map[string]any, required []string) map[string]any {

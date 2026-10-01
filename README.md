@@ -10,28 +10,28 @@ private GitLab repositories, and every tagged release is synchronised here
 Issues and pull requests are welcome; maintainers will port accepted changes
 upstream and re-publish.
 
-Last sync: 2026-09-17.
+Last sync: 2026-10-01.
 
 ## Servers
 
 | Server | Version | Container images | Description |
 |--------|---------|------------------|-------------|
-| [api](api) | v0.1.3 | `ghcr.io/agentmaurice/mcp/api*:v0.1.3` | Contract-first HTTP API calls through approved OpenAPI operation identifiers and bounded egress controls. |
-| [artifact](artifact) | v0.1.3 | `ghcr.io/agentmaurice/mcp/artifact*:v0.1.3` | Deterministic creation, patching, rendering and inspection of bounded business artifacts. |
-| [brain](brain) | v1.1.6 | `ghcr.io/agentmaurice/mcp/brain*:v1.1.6` | Go MCP server that indexes an organization's knowledge (code, documentation, |
-| [browser](browser) | v1.0.29 | `ghcr.io/agentmaurice/mcp/browser*:v1.0.29` | A Model Context Protocol (MCP) server for browser automation, built in Go. This server enables AI agents to control a web browser through a  |
-| [data](data) | v0.1.3 | `ghcr.io/agentmaurice/mcp/data*:v0.1.3` | Deterministic profiling, closed-plan querying and export of bounded CSV and tabular JSON data. |
-| [decision](decision) | v0.1.0 | `ghcr.io/agentmaurice/mcp/decision*:v0.1.0` | Classify, score and evaluate yes/no questions over short content with TypeSafe System One. Returns typed values and confidence; never executes branches or writes. Requires a TypeSafe API credential. |
+| [api](api) | v0.1.4 | `ghcr.io/agentmaurice/mcp/api*:v0.1.4` | Contract-first HTTP API calls through approved OpenAPI operation identifiers and bounded egress controls. |
+| [artifact](artifact) | v0.1.4 | `ghcr.io/agentmaurice/mcp/artifact*:v0.1.4` | Deterministic creation, patching, rendering and inspection of bounded business artifacts. |
+| [brain](brain) | v1.1.7 | `ghcr.io/agentmaurice/mcp/brain*:v1.1.7` | Go MCP server that indexes an organization's knowledge (code, documentation, |
+| [browser](browser) | v1.0.30 | `ghcr.io/agentmaurice/mcp/browser*:v1.0.30` | A Model Context Protocol (MCP) server for browser automation, built in Go. This server enables AI agents to control a web browser through a  |
+| [data](data) | v0.1.4 | `ghcr.io/agentmaurice/mcp/data*:v0.1.4` | Deterministic profiling, closed-plan querying and export of bounded CSV and tabular JSON data. |
+| [decision](decision) | v0.1.1 | `ghcr.io/agentmaurice/mcp/decision*:v0.1.1` | Classify, score and evaluate yes/no questions over short content with TypeSafe System One. Returns typed values and confidence; never executes branches or writes. Requires a TypeSafe API credential. |
 | [document](document) | v0.1.1 | `ghcr.io/agentmaurice/mcp/document*:v0.1.1` | MCP Document converts office documents to Markdown locally for AgentMaurice |
-| [guard](guard) | v0.1.3 | `ghcr.io/agentmaurice/mcp/guard*:v0.1.3` | Local detection, redaction and classification of PII, secrets and sensitive business data. |
-| [memory](memory) | v1.0.15 | `ghcr.io/agentmaurice/mcp/memory*:v1.0.15` | MCP server providing a multi-tenant, read-safe SQL memory backed by DuckDB or PostgreSQL. Writes are handled by strict ingestion tools (no a |
-| [observe](observe) | v0.1.3 | `ghcr.io/agentmaurice/mcp/observe*:v0.1.3` | Bounded and redacted runtime trace normalization, comparison and deterministic diagnostics. |
-| [ocr](ocr) | v0.1.2 | `ghcr.io/agentmaurice/mcp/ocr*:v0.1.2` | Managed, synchronous OCR MCP server. The service holds no provider key: it |
-| [rag](rag) | v1.0.19 | `ghcr.io/agentmaurice/mcp/rag*:v1.0.19` | A standalone RAG (Retrieval-Augmented Generation) server implementing the Model Context Protocol (MCP). Use it to ingest a document corpus a |
-| [search](search) | v0.1.0 | `ghcr.io/agentmaurice/mcp/search*:v0.1.0` | Recherche hybride Meilisearch et passages citables. Configuration opérateur requise : moteur séparé, clé search et processus dédié à un principal/corpus homogène en droits. |
-| [shared](shared) | main | — | Go module shared by the AgentMaurice MCP servers. |
+| [guard](guard) | v0.1.4 | `ghcr.io/agentmaurice/mcp/guard*:v0.1.4` | Local detection, redaction and classification of PII, secrets and sensitive business data. |
+| [memory](memory) | v1.0.16 | `ghcr.io/agentmaurice/mcp/memory*:v1.0.16` | MCP server providing a multi-tenant, read-safe SQL memory backed by DuckDB or PostgreSQL. Writes are handled by strict ingestion tools (no a |
+| [observe](observe) | v0.1.4 | `ghcr.io/agentmaurice/mcp/observe*:v0.1.4` | Bounded and redacted runtime trace normalization, comparison and deterministic diagnostics. |
+| [ocr](ocr) | v0.1.3 | `ghcr.io/agentmaurice/mcp/ocr*:v0.1.3` | Managed, synchronous OCR MCP server. The service holds no provider key: it |
+| [rag](rag) | v1.0.20 | `ghcr.io/agentmaurice/mcp/rag*:v1.0.20` | A standalone RAG (Retrieval-Augmented Generation) server implementing the Model Context Protocol (MCP). Use it to ingest a document corpus a |
+| [search](search) | v0.1.1 | `ghcr.io/agentmaurice/mcp/search*:v0.1.1` | Recherche hybride Meilisearch et passages citables. Configuration opérateur requise : moteur séparé, clé search et processus dédié à un principal/corpus homogène en droits. |
+| [shared](shared) | v0.1.0 | — | Go module shared by the AgentMaurice MCP servers. |
 | [sidecar](sidecar) | v0.1.0 | `ghcr.io/agentmaurice/mcp/sidecar*:v0.1.0` | Runtime sidecar des serveurs MCP AgentMaurice : un binaire Go autonome qui |
-| [ssh](ssh) | v0.1.1 | `ghcr.io/agentmaurice/mcp/ssh*:v0.1.1` | Governed synchronous SSH administration over pre-published remote targets with strict host-key verification. |
+| [ssh](ssh) | v0.1.2 | `ghcr.io/agentmaurice/mcp/ssh*:v0.1.2` | Governed synchronous SSH administration over pre-published remote targets with strict host-key verification. |
 
 `shared` is the common library used by the other servers; it is not a
 server by itself.

@@ -11,8 +11,7 @@ replace github.com/agentmaurice/mcpchatui/mcp/shared => ../shared
 require (
 	github.com/chromedp/cdproto v0.0.0-20241022234722-4d5d5faf59fb
 	github.com/chromedp/chromedp v0.11.2
-	github.com/mark3labs/mcp-go v0.43.2
-	github.com/modelcontextprotocol/go-sdk v1.7.0
+	github.com/mark3labs/mcp-go v1.1.1
 	github.com/spf13/viper v1.20.1
 	go.uber.org/zap v1.27.0
 )
@@ -33,6 +32,7 @@ require (
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect

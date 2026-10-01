@@ -11,19 +11,19 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	officialmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"go.uber.org/zap"
 
 	"github.com/agentmaurice/mcpchatui/mcp/browser/internal/business"
 	"github.com/agentmaurice/mcpchatui/mcp/browser/internal/config"
 	"github.com/agentmaurice/mcpchatui/mcp/browser/internal/shared"
+	"github.com/agentmaurice/mcpchatui/mcp/shared/modernmcp"
 )
 
 // Server represents the MCP server
 type Server struct {
 	mcpServer      *server.MCPServer
 	sseServer      *server.SSEServer
-	modernServer   *officialmcp.Server
+	modernServer   *modernmcp.Server
 	modernHandler  http.Handler
 	stdioServer    *server.StdioServer
 	browserManager *business.BrowserManager
@@ -80,10 +80,7 @@ func (s *Server) Start(ctx context.Context) error {
 		server.WithMessageEndpoint(s.config.MessagePath),
 	)
 	s.sseServer = sseServer
-	s.modernHandler = officialmcp.NewStreamableHTTPHandler(
-		func(*http.Request) *officialmcp.Server { return s.modernServer },
-		&officialmcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true},
-	)
+	s.modernHandler = s.modernServer.Handler()
 	s.stdioServer = server.NewStdioServer(mcpServer)
 
 	if supportsHTTPTransport(s.transportMode) {

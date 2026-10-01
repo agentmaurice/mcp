@@ -354,8 +354,7 @@ BROWSER_LOGGING_LEVEL=debug BROWSER_LOGGING_FORMAT=console go run ./cmd/browser
 | Library | Purpose |
 |---------|---------|
 | `github.com/chromedp/chromedp` | CDP client for browser control |
-| `github.com/modelcontextprotocol/go-sdk` | MCP 2026-07-28 Streamable HTTP implementation |
-| `github.com/mark3labs/mcp-go` | Legacy SSE and STDIO compatibility |
+| `github.com/mark3labs/mcp-go` | MCP 2026-07-28 Streamable HTTP and legacy SSE/STDIO compatibility |
 | `github.com/spf13/viper` | Configuration management |
 | `go.uber.org/zap` | Structured logging |
 | `github.com/rs/xid` | Distributed unique IDs |

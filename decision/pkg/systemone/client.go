@@ -3,6 +3,8 @@ package systemone
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,6 +18,9 @@ import (
 )
 
 type Config struct {
+	Provider   string
+	InstanceID string
+
 	APIKey        string
 	URL           string
 	Model         string
@@ -33,6 +38,12 @@ type Client struct {
 func New(cfg Config) (*Client, error) {
 	if strings.TrimSpace(cfg.APIKey) == "" {
 		return nil, errors.New("TypeSafe API key is required")
+	}
+	if cfg.Provider == "" {
+		cfg.Provider = "typesafe"
+	}
+	if cfg.Provider != "typesafe" && cfg.Provider != "agentmaurice" {
+		return nil, errors.New("unsupported System One provider")
 	}
 	if cfg.URL == "" {
 		cfg.URL = "https://api.typesafe.ai"
@@ -56,12 +67,28 @@ func New(cfg Config) (*Client, error) {
 	if cfg.Timeout <= 0 || cfg.MaxStateBytes < 1 || cfg.MaxStateBytes > MaxStateBytes {
 		return nil, errors.New("timeout must be positive and state limit must be between 1 and 32768 bytes")
 	}
-	cfg.URL = strings.TrimRight(cfg.URL, "/")
-	if !strings.HasSuffix(cfg.URL, "/v1/systemone") {
-		cfg.URL += "/v1/systemone"
-	}
+	cfg.URL = endpointURL(cfg.Provider, cfg.URL)
 	return &Client{config: cfg, http: &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}, nil
 }
+
+// Vendor and OpenRouter BYOK speak the TypeSafe API on /v1/systemone. The
+// AgentMaurice gateway exposes the decision contract on /v1/decisions, named
+// by category so another provider can sit behind the same route.
+const (
+	typeSafePath = "/v1/systemone"
+	hostedPath   = "/v1/decisions"
+)
+
+func endpointURL(provider, base string) string {
+	base = strings.TrimRight(base, "/")
+	base = strings.TrimSuffix(strings.TrimSuffix(base, typeSafePath), hostedPath)
+	if provider == "agentmaurice" {
+		return base + hostedPath
+	}
+	return base + typeSafePath
+}
+
+func (c *Client) Provider() string { return c.config.Provider }
 
 func (c *Client) Model() string   { return c.config.Model }
 func (c *Client) StateLimit() int { return c.config.MaxStateBytes }
@@ -73,6 +100,10 @@ type providerRequest struct {
 }
 
 func (c *Client) Ask(ctx context.Context, req Request) (*Result, error) {
+	requestID := make([]byte, 16)
+	if _, err := rand.Read(requestID); err != nil {
+		return nil, errors.New("cannot create System One request id")
+	}
 	if err := req.Validate(c.config.MaxStateBytes); err != nil {
 		return nil, err
 	}
@@ -111,6 +142,10 @@ func (c *Client) Ask(ctx context.Context, req Request) (*Result, error) {
 		}
 		httpReq.Header.Set("Authorization", "Bearer "+c.config.APIKey)
 		httpReq.Header.Set("Content-Type", "application/json")
+		httpReq.Header.Set("X-Request-ID", hex.EncodeToString(requestID))
+		if c.config.InstanceID != "" {
+			httpReq.Header.Set("X-AgentMaurice-Instance-ID", c.config.InstanceID)
+		}
 		resp, err := c.http.Do(httpReq)
 		if err != nil {
 			// net/http errors may embed URLs. Never return provider bodies or
@@ -126,9 +161,9 @@ func (c *Client) Ask(ctx context.Context, req Request) (*Result, error) {
 			return nil, errors.New("invalid or oversized System One response")
 		}
 		if resp.StatusCode == http.StatusOK {
-			return decodeResult(data, req, c.config.Model)
+			return decodeResult(data, req, c.config.Provider)
 		}
-		if (resp.StatusCode == 429 || resp.StatusCode == 529) && attempt < 2 {
+		if (resp.StatusCode == 429 || resp.StatusCode == 529) && attempt < 2 && c.config.Provider != "agentmaurice" {
 			delay := time.Duration(100*(1<<attempt)) * time.Millisecond
 			if seconds, err := strconv.Atoi(resp.Header.Get("Retry-After")); err == nil && seconds > 0 {
 				if seconds > 2 {
@@ -147,17 +182,22 @@ func (c *Client) Ask(ctx context.Context, req Request) (*Result, error) {
 		}
 		switch resp.StatusCode {
 		case 401:
-			return nil, errors.New("System One authentication failed (401); check the configured credential")
+			return nil, &HTTPStatusError{Status: 401, Message: "System One authentication failed (401); check the configured credential"}
 		case 422:
-			return nil, errors.New("System One rejected the contract (422)")
+			return nil, &HTTPStatusError{Status: 422, Message: "System One rejected the contract (422)"}
 		default:
-			return nil, fmt.Errorf("System One provider failed (HTTP %d)", resp.StatusCode)
+			return nil, &HTTPStatusError{Status: resp.StatusCode, Message: fmt.Sprintf("System One provider failed (HTTP %d)", resp.StatusCode)}
 		}
 	}
 	return nil, errors.New("System One attempts exhausted")
 }
 
-func decodeResult(data []byte, req Request, requestedModel string) (*Result, error) {
+// decodeResult validates a provider or gateway response against the request.
+// The vendor API carries no confidence_kind: TypeSafe answers are calibrated
+// by construction. The AgentMaurice gateway rail serves the decision contract,
+// so confidence_kind comes from the gateway and names the resolved provider's
+// kind; a missing or unknown kind is a contract violation.
+func decodeResult(data []byte, req Request, provider string) (*Result, error) {
 	var wire struct {
 		Model   string                     `json:"model"`
 		Answers map[string]json.RawMessage `json:"answers"`
@@ -170,13 +210,19 @@ func decodeResult(data []byte, req Request, requestedModel string) (*Result, err
 	if json.Unmarshal(data, &wire) != nil || wire.Model == "" || len(wire.Answers) != len(req.Questions) || wire.Usage == nil || wire.Usage.InputTokens == nil || *wire.Usage.InputTokens < 0 || (wire.Usage.OutputTokens != nil && *wire.Usage.OutputTokens < 0) {
 		return nil, bad
 	}
-	result := &Result{Answers: map[string]Answer{}, Provider: "typesafe", Model: wire.Model, InputTokens: *wire.Usage.InputTokens}
+	result := &Result{Answers: map[string]Answer{}, Provider: provider, Model: wire.Model, InputTokens: *wire.Usage.InputTokens}
 	for id, q := range req.Questions {
 		var a Answer
 		if json.Unmarshal(wire.Answers[id], &a) != nil || a.Type != q.Type {
 			return nil, bad
 		}
-		a.ConfidenceKind = "calibrated"
+		if provider == "agentmaurice" {
+			if !validConfidenceKind(a.ConfidenceKind) {
+				return nil, bad
+			}
+		} else {
+			a.ConfidenceKind = "calibrated"
+		}
 		a.ViaFallback = false
 		if q.Type == "noul" {
 			if a.Noul == nil || !unit(*a.Noul) || a.Choice != "" || a.Score != nil || a.Confidence != nil || len(a.Probabilities) != 0 || len(a.Legend) != 0 {
@@ -210,22 +256,20 @@ func decodeResult(data []byte, req Request, requestedModel string) (*Result, err
 			if len(a.Probabilities) != len(expected) {
 				return nil, bad
 			}
-			sum, weighted := 0.0, 0.0
+			lowerSum, upperSum := 0.0, 0.0
 			for k := range expected {
 				p, ok := a.Probabilities[k]
 				if !ok || !unit(p) {
 					return nil, bad
 				}
-				sum += p
+				lower, upper := probabilityRoundingBounds(p)
+				lowerSum += lower
+				upperSum += upper
 				if q.Type == "choice" && p > a.Probabilities[a.Choice]+1e-6 {
 					return nil, bad
 				}
-				if q.Type == "score" {
-					i, _ := strconv.Atoi(k)
-					weighted += float64(i) * p
-				}
 			}
-			if math.Abs(sum-1) > 1e-4 || (q.Type == "score" && math.Abs(weighted-*a.Score) > 1e-4) {
+			if lowerSum > 1+1e-6 || upperSum < 1-1e-6 || (q.Type == "score" && !roundedScoreConsistent(a.Probabilities, *a.Score)) {
 				return nil, bad
 			}
 			if q.MinConfidence != nil && *a.Confidence < *q.MinConfidence {
@@ -241,3 +285,53 @@ func decodeResult(data []byte, req Request, requestedModel string) (*Result, err
 	}
 	return result, nil
 }
+
+func validConfidenceKind(kind string) bool {
+	return kind == "calibrated" || kind == "self_reported" || kind == "none"
+}
+
+// Jev publishes probabilities and scores rounded to two decimal places. Check
+// whether a normalized distribution inside those rounding intervals can yield
+// the reported score; do not reject valid responses or alter provider values.
+func probabilityRoundingBounds(p float64) (float64, float64) {
+	tolerance := 1e-6
+	if math.Abs(p*100-math.Round(p*100)) < 1e-6 {
+		tolerance = 0.005
+	}
+	return math.Max(0, p-tolerance), math.Min(1, p+tolerance)
+}
+
+func roundedScoreConsistent(probabilities map[string]float64, score float64) bool {
+	bound := func(reverse bool) float64 {
+		remaining, weighted := 1.0, 0.0
+		for i := 0; i < len(probabilities); i++ {
+			low, _ := probabilityRoundingBounds(probabilities[strconv.Itoa(i)])
+			remaining -= low
+			weighted += float64(i) * low
+		}
+		for step := 0; step < len(probabilities); step++ {
+			i := step
+			if reverse {
+				i = len(probabilities) - 1 - step
+			}
+			low, high := probabilityRoundingBounds(probabilities[strconv.Itoa(i)])
+			amount := math.Min(math.Max(0, remaining), high-low)
+			weighted += float64(i) * amount
+			remaining -= amount
+		}
+		return weighted
+	}
+	tolerance := 1e-6
+	if math.Abs(score*100-math.Round(score*100)) < 1e-6 {
+		tolerance = 0.005
+	}
+	return score+tolerance+1e-6 >= bound(false) && score-tolerance-1e-6 <= bound(true)
+}
+
+// HTTPStatusError exposes only the status and a safe message, never the body.
+type HTTPStatusError struct {
+	Status  int
+	Message string
+}
+
+func (e *HTTPStatusError) Error() string { return e.Message }

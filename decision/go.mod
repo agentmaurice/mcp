@@ -2,15 +2,18 @@ module github.com/agentmaurice/mcpchatui/mcp/decision
 
 go 1.26.0
 
+require github.com/spf13/viper v1.20.1
+
 require (
-	github.com/modelcontextprotocol/go-sdk v1.7.0
-	github.com/spf13/viper v1.20.1
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 )
 
 require (
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
+	github.com/mark3labs/mcp-go v1.1.1
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
@@ -21,8 +24,8 @@ require (
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.9.0 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect

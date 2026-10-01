@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-09-17T08:58:09Z",
+  "generated_at": "2026-10-01T08:59:02Z",
   "github": "agentmaurice/mcp",
   "mcp": {
-    "api": {"version": "v0.1.3", "ref": "refs/tags/v0.1.3", "commit": "f2721e3485420e006d2c810e6af1ae512f155e69"},
-    "artifact": {"version": "v0.1.3", "ref": "refs/tags/v0.1.3", "commit": "9fb5cad9c76bdbcd0c83764054b660c158f3868b"},
-    "brain": {"version": "v1.1.6", "ref": "refs/tags/v1.1.6", "commit": "5b135d0c2977a1284cce1453df0db2b911dd2339"},
-    "browser": {"version": "v1.0.29", "ref": "refs/tags/v1.0.29", "commit": "0fbdd667d787df66c34b7580088ccf91f19e1600"},
-    "data": {"version": "v0.1.3", "ref": "refs/tags/v0.1.3", "commit": "a7624e538074c932000fd93ae754775d28e6fbd4"},
-    "decision": {"version": "v0.1.0", "ref": "refs/tags/v0.1.0", "commit": "66394166d94a20d7cefcb8f8389de8b61765dfc2"},
-    "document": {"version": "v0.1.1", "ref": "refs/tags/v0.1.1", "commit": "29d576742a6e9a6b16428fb8382cce50b9e23b9d"},
-    "guard": {"version": "v0.1.3", "ref": "refs/tags/v0.1.3", "commit": "b2f4705eeaa5b631334cd685300eec07f4f8d540"},
-    "memory": {"version": "v1.0.15", "ref": "refs/tags/v1.0.15", "commit": "6b78bbb284ed0f2c327723d076f9060addd81d61"},
-    "observe": {"version": "v0.1.3", "ref": "refs/tags/v0.1.3", "commit": "4e6b2ba91088c336c2db09eb0e02bfd1c44b6e0b"},
-    "ocr": {"version": "v0.1.2", "ref": "refs/tags/v0.1.2", "commit": "3b50e819173f3ef08dd4058e1d70609d484a9ad9"},
-    "rag": {"version": "v1.0.19", "ref": "refs/tags/v1.0.19", "commit": "4b20615acb00bdd77b3fe630a1161df8319e2e4f"},
-    "search": {"version": "v0.1.0", "ref": "refs/tags/v0.1.0", "commit": "54f25e9ea5e2040b064eb2b0b9007ffa20e9832f"},
-    "shared": {"version": "", "ref": "origin/main", "commit": "9a165b0cdce300dcd8617e0f69130adc076c4474"},
+    "api": {"version": "v0.1.4", "ref": "refs/tags/v0.1.4", "commit": "27b137e366eab3659737f97d67c54d878eea8865"},
+    "artifact": {"version": "v0.1.4", "ref": "refs/tags/v0.1.4", "commit": "41d326baf1d467c8b3ee79d732eb59794b54e501"},
+    "brain": {"version": "v1.1.7", "ref": "refs/tags/v1.1.7", "commit": "96594dafc4bd6ab8eb45b6263d20d9079ae6c8cb"},
+    "browser": {"version": "v1.0.30", "ref": "refs/tags/v1.0.30", "commit": "56d5b588f624c9800a20383a6d13a34ea1dcd954"},
+    "data": {"version": "v0.1.4", "ref": "refs/tags/v0.1.4", "commit": "21ee5a7a7ae77d92cb3ec0af5dba7ce1c4ed8ba9"},
+    "decision": {"version": "v0.1.1", "ref": "refs/tags/v0.1.1", "commit": "2ae53fcc0b587bd4e2a02c50f6820ad95d5428a1"},
+    "document": {"version": "v0.1.1", "ref": "refs/tags/v0.1.1", "commit": "5974d26e03de1f974049303f8b133e7eb8339247"},
+    "guard": {"version": "v0.1.4", "ref": "refs/tags/v0.1.4", "commit": "e146c2c138a043c53797504f45f82e83e07b49db"},
+    "memory": {"version": "v1.0.16", "ref": "refs/tags/v1.0.16", "commit": "64aa21959676f1ede887df2d4f151aa959f70093"},
+    "observe": {"version": "v0.1.4", "ref": "refs/tags/v0.1.4", "commit": "67a98972aab00c498f261f3626da84fcd6002a48"},
+    "ocr": {"version": "v0.1.3", "ref": "refs/tags/v0.1.3", "commit": "03a8c3989f6b466c11566bfe319f2392c3e10249"},
+    "rag": {"version": "v1.0.20", "ref": "refs/tags/v1.0.20", "commit": "8bdcfd1a7d84457eda878126f5640bd5e068210d"},
+    "search": {"version": "v0.1.1", "ref": "refs/tags/v0.1.1", "commit": "ac5524055aa76b0c0ced3e9d19b3229b23378095"},
+    "shared": {"version": "v0.1.0", "ref": "refs/tags/v0.1.0", "commit": "53e25eeee0f8a39e5537c577bd1fb21c8467f39f"},
     "sidecar": {"version": "v0.1.0", "ref": "refs/tags/v0.1.0", "commit": "8c9861350d162d8434a7e1ac924e714042d8ac4e"},
-    "ssh": {"version": "v0.1.1", "ref": "refs/tags/v0.1.1", "commit": "72060a0aaa807ee1b8e698a167efada999c8e598"}
+    "ssh": {"version": "v0.1.2", "ref": "refs/tags/v0.1.2", "commit": "ed7a52fc540dec8c8848c87e4f7477479110e570"}
   }
 }

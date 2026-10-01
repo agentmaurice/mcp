@@ -27,10 +27,15 @@ func main() {
 		fmt.Fprintf(os.Stderr, "SSH configuration is invalid: %v\n", err)
 		os.Exit(1)
 	}
+	credentials, err := credentialProviderFromConfig(cfg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "SSH credential provider is invalid: %v\n", err)
+		os.Exit(1)
+	}
 	service, err := sshservice.New(
 		cfg.Service,
 		sshservice.NewFileTargetStore(cfg.TargetsFile),
-		sshservice.NewFileCredentialProvider(cfg.CredentialsFile),
+		credentials,
 		sshservice.NewSSHConnector(),
 	)
 	if err != nil {
@@ -44,4 +49,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "SSH MCP server exited: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func credentialProviderFromConfig(cfg config.Config) (sshservice.CredentialProvider, error) {
+	if cfg.VaultURL != "" {
+		return sshservice.NewVaultCredentialProvider(cfg.VaultURL, cfg.VaultConsumerPrivB64)
+	}
+	return sshservice.NewFileCredentialProvider(cfg.CredentialsFile), nil
 }

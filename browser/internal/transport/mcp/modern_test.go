@@ -11,11 +11,11 @@ import (
 
 	legacymcp "github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	officialmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"go.uber.org/zap"
 )
 
 const modernProtocolVersion = "2026-07-28"
+const jsonSchema202012 = "https://json-schema.org/draft/2020-12/schema"
 
 func TestModernHTTPProtocol(t *testing.T) {
 	modernServer := newModernMCPServer("browser-mcp", "1.0.0")
@@ -56,10 +56,7 @@ func TestModernHTTPProtocol(t *testing.T) {
 			},
 		))
 	}
-	handler := officialmcp.NewStreamableHTTPHandler(
-		func(*http.Request) *officialmcp.Server { return modernServer },
-		&officialmcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true},
-	)
+	handler := modernServer.Handler()
 
 	t.Run("discover", func(t *testing.T) {
 		status, header, response := postMCP(t, handler, modernProtocolVersion, "server/discover", "", map[string]any{
@@ -229,10 +226,7 @@ func TestAdaptToolHandlerSupportsAnyJSONStructuredContent(t *testing.T) {
 				StructuredContent: value,
 			}, nil
 		}
-		result, err := adaptToolHandler(server.ToolHandlerFunc(legacyHandler))(
-			context.Background(),
-			&officialmcp.CallToolRequest{Params: &officialmcp.CallToolParamsRaw{Name: "test", Arguments: json.RawMessage(`{}`)}},
-		)
+		result, err := adaptToolHandler(server.ToolHandlerFunc(legacyHandler))(context.Background(), legacymcp.CallToolRequest{Params: legacymcp.CallToolParams{Name: "test", Arguments: map[string]any{}}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -268,10 +262,7 @@ func TestAllBrowserToolsRegisterOnModernServer(t *testing.T) {
 	}
 	s.registerTools()
 
-	handler := officialmcp.NewStreamableHTTPHandler(
-		func(*http.Request) *officialmcp.Server { return modernServer },
-		&officialmcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true},
-	)
+	handler := modernServer.Handler()
 	status, _, response := postMCP(t, handler, modernProtocolVersion, "tools/list", "", map[string]any{
 		"_meta": modernMeta(modernProtocolVersion),
 	})

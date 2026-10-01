@@ -14,7 +14,7 @@ import (
 
 	"github.com/agentmaurice/mcpchatui/mcp/decision/internal/mcpserver"
 	"github.com/agentmaurice/mcpchatui/mcp/decision/pkg/systemone"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/viper"
 )
 
@@ -33,6 +33,7 @@ func run() error {
 	v.SetDefault("transport", "stdio")
 	v.SetDefault("http_addr", "127.0.0.1:8080")
 	v.SetDefault("typesafe_url", "https://api.typesafe.ai")
+	v.SetDefault("hosted_url", "https://llm.agentmaurice.app")
 	v.SetDefault("model", "jev-latest")
 	v.SetDefault("timeout", "5s")
 	v.SetDefault("max_state_bytes", 32768)
@@ -49,7 +50,7 @@ func run() error {
 	defer stop()
 	switch v.GetString("transport") {
 	case "stdio":
-		return s.Run(ctx, &mcp.StdioTransport{})
+		return server.NewStdioServer(s).Listen(ctx, os.Stdin, os.Stdout)
 	case "http":
 		h := &http.Server{Addr: v.GetString("http_addr"), Handler: mcpserver.Handler(s), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 120 * time.Second}
 		go func() {
@@ -87,5 +88,19 @@ func configuration(v *viper.Viper) (systemone.Config, error) {
 	if err != nil || limit <= 0 || limit > 32768 {
 		return systemone.Config{}, errors.New("invalid MCP_DECISION_MAX_STATE_BYTES")
 	}
-	return systemone.Config{APIKey: key, URL: v.GetString("typesafe_url"), Model: v.GetString("model"), Timeout: timeout, MaxStateBytes: limit}, nil
+	cfg := systemone.Config{APIKey: key, Provider: "typesafe", URL: v.GetString("typesafe_url"), Model: v.GetString("model"), Timeout: timeout, MaxStateBytes: limit}
+	if key == "" && v.GetString("typesafe_api_key_file") == "" && strings.TrimSpace(v.GetString("hosted_key")) != "" {
+		cfg.APIKey = strings.TrimSpace(v.GetString("hosted_key"))
+		cfg.Provider = "agentmaurice"
+		cfg.URL = v.GetString("hosted_url")
+		if cfg.URL == "" {
+			cfg.URL = "https://llm.agentmaurice.app"
+		}
+		cfg.Model = "hosted:" + strings.TrimPrefix(strings.TrimPrefix(cfg.Model, "hosted:"), "agentmaurice:")
+		if cfg.Model == "hosted:" {
+			cfg.Model = "hosted:jev-latest"
+		}
+		cfg.InstanceID = strings.TrimSpace(v.GetString("hosted_instance_id"))
+	}
+	return cfg, nil
 }
