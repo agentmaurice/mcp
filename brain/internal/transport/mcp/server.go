@@ -11,6 +11,7 @@ import (
 	"github.com/agentmaurice/mcpchatui/mcp/brain/internal/shared"
 	"github.com/agentmaurice/mcpchatui/mcp/brain/internal/storage"
 	"github.com/agentmaurice/mcpchatui/mcp/shared/modernmcp"
+	"github.com/agentmaurice/mcpchatui/mcp/shared/telemetry"
 	mcplib "github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"go.uber.org/zap"
@@ -133,7 +134,9 @@ func (s *Server) registerTools(mcpServer *server.MCPServer) {
 	for _, tool := range tools {
 		definition := tool.Definition()
 		handler := s.wrapToolHandler(tool.Name(), tool.Handler())
-		mcpServer.AddTool(definition, handler)
+		// modernmcp opens the mcp.server.tool span itself; the legacy
+		// (STDIO, SSE) server needs it here.
+		mcpServer.AddTool(definition, telemetry.WrapToolHandler(tool.Name(), handler))
 		s.modernServer.AddTool(toOfficialTool(definition), adaptToolHandler(handler))
 	}
 

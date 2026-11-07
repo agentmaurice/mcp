@@ -1,0 +1,28 @@
+{
+  "schema": "agentmaurice.template/v1",
+  "key": "index-range-variable",
+  "version": "1.0.0",
+  "title": "Devis",
+  "description": "Devis avec lignes, quantit\u00e9s, prix unitaire HT, TVA, totaux fournis en amont, conditions et validit\u00e9.",
+  "kind": "document",
+  "profile": "document",
+  "source": {
+    "engine": "typst",
+    "entry": "main.typ"
+  },
+  "outputs": [
+    "pdf"
+  ],
+  "locales": [
+    "fr"
+  ],
+  "default_locale": "fr",
+  "input_schema": "input.schema.json",
+  "examples": [
+    {
+      "name": "default",
+      "data": "examples/default.json"
+    }
+  ],
+  "fragments": []
+}

@@ -1,3 +1,6 @@
+# SIDECAR_IMAGE: mcp-sidecar base image (declared before the first FROM to be usable in one).
+ARG SIDECAR_IMAGE
+
 FROM golang:1.26.0-bookworm@sha256:2a0ba12e116687098780d3ce700f9ce3cb340783779646aafbabed748fa6677c AS builder
 
 WORKDIR /src/mcp
@@ -13,9 +16,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
-RUN CGO_ENABLED=1 go build -tags duckdb -o /out/brain ./cmd/brain
+RUN mkdir -p /out && CGO_ENABLED=1 go build -tags duckdb -o /out/brain ./cmd/brain
+# Install the DuckDB fts extension with this exact binary (same DuckDB library and
+# platform) under /out/ext, so that the runtime needs no network access.
+RUN mkdir -p /out/ext && BRAIN_DUCKDB_EXTENSION_DIR=/out/ext /out/brain -prefetch-extensions
 
-ARG SIDECAR_IMAGE
 FROM ${SIDECAR_IMAGE} AS sidecar
 
 FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818
@@ -34,10 +39,13 @@ COPY --chmod=755 --from=builder /src/mcp/brain/docker/run-brain-stdio.sh /usr/lo
 COPY --chmod=755 --from=sidecar /usr/local/bin/mcp_sidecar /usr/local/bin/mcp-sidecar
 
 RUN chown -R app:app /app /var/lib/brain /var/mcp /tmp
+COPY --chown=app:app --from=builder /out/ext /opt/brain/duckdb-extensions
 
 WORKDIR /app
 USER app
 
+ENV HOME=/home/app
+ENV BRAIN_DUCKDB_EXTENSION_DIR=/opt/brain/duckdb-extensions
 ENV BRAIN_BASE_DIR=/var/lib/brain
 ENV BRAIN_STORAGE_BACKEND=duckdb
 ENV BRAIN_EMBEDDING_PROVIDER=none

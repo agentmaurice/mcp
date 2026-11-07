@@ -1,0 +1,44 @@
+{
+  "meeting": {
+    "title": "Point d'avancement du projet Exemple",
+    "date": "2026-11-05"
+  },
+  "participants": [
+    {
+      "name": "Camille Martin",
+      "role": "Cheffe de projet",
+      "present": true
+    },
+    {
+      "name": "Alex Durand",
+      "role": "Développeur",
+      "present": true
+    },
+    {
+      "name": "Sam Leroy",
+      "role": "Client référent",
+      "present": false
+    }
+  ],
+  "agenda": [
+    "Revue de l'avancement",
+    "Budget restant et risques",
+    "Planning de la prochaine itération"
+  ],
+  "decisions": [
+    "Le lot A est validé en l'état.",
+    "La recette est repoussée au 2026-11-20 (marge de sécurité)."
+  ],
+  "actions": [
+    {
+      "description": "Envoyer le planning révisé",
+      "owner": "Camille Martin",
+      "due_date": "2026-11-08"
+    },
+    {
+      "description": "Corriger les 3 anomalies de recette",
+      "owner": "Alex Durand",
+      "due_date": "2026-11-15"
+    }
+  ]
+}

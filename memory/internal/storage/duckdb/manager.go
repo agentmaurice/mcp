@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	_ "github.com/marcboeker/go-duckdb/v2"
+	_ "github.com/duckdb/duckdb-go/v2"
 	"go.uber.org/zap"
 
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/config"
@@ -134,6 +134,22 @@ func (m *Manager) ensureTenant(ctx context.Context, tenantID string) (*tenantDB,
 		_ = os.MkdirAll(m.DocumentsDir(tenantID), 0755)
 	}
 
+	// A file written by DuckDB 1.x cannot be read by a 1.x image once 2.x has opened it.
+	taken, err := backupBeforeUpgrade(path)
+	if err != nil {
+		return nil, fmt.Errorf("tenant %s: %w", tenantID, err)
+	}
+	opened := false
+	if taken {
+		m.logger.Info("tenant database backed up before the DuckDB 2 upgrade",
+			zap.String("tenant", tenantID), zap.String("backup", path+PreUpgradeBackupSuffix))
+		defer func() {
+			if !opened {
+				discardBackupIfUnchanged(path)
+			}
+		}()
+	}
+
 	db, err := m.openDB(ctx, path)
 	if err != nil {
 		// Attempt WAL recovery: remove WAL file and retry.
@@ -174,6 +190,7 @@ func (m *Manager) ensureTenant(ctx context.Context, tenantID string) (*tenantDB,
 	writeCh := make(chan writeRequest, m.cfg.WriteQueueSize)
 	td := &tenantDB{db: db, path: path, writeCh: writeCh}
 	m.tenants[tenantID] = td
+	opened = true
 
 	go m.writerLoop(tenantID, td)
 
@@ -193,7 +210,7 @@ func (m *Manager) openDB(ctx context.Context, path string) (*sql.DB, error) {
 		db.SetMaxIdleConns(m.cfg.ReadMaxIdleConns)
 	}
 
-	if err := EnsureSchema(ctx, db); err != nil {
+	if err := EnsureSchemaLogged(ctx, db, m.logger); err != nil {
 		_ = db.Close()
 		return nil, err
 	}

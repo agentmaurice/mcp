@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/agentmaurice/mcpchatui/mcp/brain/internal/config"
 	"github.com/agentmaurice/mcpchatui/mcp/brain/internal/connector"
@@ -19,6 +20,8 @@ import (
 	"github.com/agentmaurice/mcpchatui/mcp/brain/internal/shared"
 	"github.com/agentmaurice/mcpchatui/mcp/brain/internal/storage"
 	mcptransport "github.com/agentmaurice/mcpchatui/mcp/brain/internal/transport/mcp"
+	"github.com/agentmaurice/mcpchatui/mcp/shared/telemetry"
+	"github.com/agentmaurice/mcpchatui/mcp/shared/version"
 	"go.uber.org/zap"
 )
 
@@ -29,6 +32,8 @@ type App struct {
 	storage  storage.Manager
 	mcp      *mcptransport.Server
 	managers []shared.Manager
+
+	shutdownTelemetry func(context.Context) error
 }
 
 // New creates a new App instance.
@@ -53,6 +58,12 @@ func New() (*App, error) {
 // Initialize builds dependencies and transports.
 func (a *App) Initialize(ctx context.Context, transport string) error {
 	a.logger.Info("initializing brain server")
+
+	shutdownTelemetry, err := telemetry.Init(ctx, "mcp-brain", version.Version)
+	if err != nil {
+		a.logger.Warn("trace export disabled", zap.Error(err))
+	}
+	a.shutdownTelemetry = shutdownTelemetry
 
 	// Storage
 	manager, err := storage.NewManager(a.cfg.Storage, a.logger)
@@ -182,6 +193,12 @@ func (a *App) Stop() error {
 
 	if a.storage != nil {
 		_ = a.storage.Close()
+	}
+
+	if a.shutdownTelemetry != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = a.shutdownTelemetry(ctx)
 	}
 
 	return nil

@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	stypes "github.com/agentmaurice/mcpchatui/mcp/brain/internal/storage/types"
+	"github.com/agentmaurice/mcpchatui/mcp/shared/telemetry"
 )
 
 // sqlQuerier wraps *sql.DB to implement stypes.Querier.
@@ -19,7 +20,9 @@ func newSQLQuerier(db *sql.DB) stypes.Querier {
 	return &sqlQuerier{db: db}
 }
 
-func (q *sqlQuerier) QueryContext(ctx context.Context, query string, args ...any) (*stypes.QueryResult, error) {
+func (q *sqlQuerier) QueryContext(ctx context.Context, query string, args ...any) (result *stypes.QueryResult, err error) {
+	ctx, span := telemetry.StartDBQuery(ctx, "duckdb", query)
+	defer func() { telemetry.EndDBQuery(span, queryRows(result), err) }()
 	rows, err := q.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -27,7 +30,9 @@ func (q *sqlQuerier) QueryContext(ctx context.Context, query string, args ...any
 	return scanRows(rows)
 }
 
-func (q *sqlQuerier) ExecContext(ctx context.Context, query string, args ...any) (int64, error) {
+func (q *sqlQuerier) ExecContext(ctx context.Context, query string, args ...any) (affected int64, err error) {
+	ctx, span := telemetry.StartDBQuery(ctx, "duckdb", query)
+	defer func() { telemetry.EndDBQuery(span, int(affected), err) }()
 	result, err := q.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return 0, err
@@ -76,7 +81,9 @@ func newSQLConnQuerier(conn *sql.Conn) stypes.Querier {
 	return &sqlConnQuerier{conn: conn}
 }
 
-func (q *sqlConnQuerier) QueryContext(ctx context.Context, query string, args ...any) (*stypes.QueryResult, error) {
+func (q *sqlConnQuerier) QueryContext(ctx context.Context, query string, args ...any) (result *stypes.QueryResult, err error) {
+	ctx, span := telemetry.StartDBQuery(ctx, "duckdb", query)
+	defer func() { telemetry.EndDBQuery(span, queryRows(result), err) }()
 	rows, err := q.conn.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -84,10 +91,20 @@ func (q *sqlConnQuerier) QueryContext(ctx context.Context, query string, args ..
 	return scanRows(rows)
 }
 
-func (q *sqlConnQuerier) ExecContext(ctx context.Context, query string, args ...any) (int64, error) {
+func (q *sqlConnQuerier) ExecContext(ctx context.Context, query string, args ...any) (affected int64, err error) {
+	ctx, span := telemetry.StartDBQuery(ctx, "duckdb", query)
+	defer func() { telemetry.EndDBQuery(span, int(affected), err) }()
 	result, err := q.conn.ExecContext(ctx, query, args...)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+// queryRows is the row count recorded on a db.query span, -1 when unknown.
+func queryRows(result *stypes.QueryResult) int {
+	if result == nil {
+		return -1
+	}
+	return len(result.Rows)
 }

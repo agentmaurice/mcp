@@ -41,7 +41,7 @@ RUN groupadd -g 1000 app && \
 
 COPY --from=memory-builder /out/mcp-memory /usr/local/bin/mcp-memory
 COPY --from=sidecar /usr/local/bin/mcp_sidecar /usr/local/bin/mcp-sidecar
-COPY docker/run-memory-stdio.sh /usr/local/bin/run-memory-stdio.sh
+COPY memory/docker/run-memory-stdio.sh /usr/local/bin/run-memory-stdio.sh
 RUN chmod +x /usr/local/bin/run-memory-stdio.sh
 
 USER app

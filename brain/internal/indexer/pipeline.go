@@ -310,6 +310,7 @@ func (p *Pipeline) processFile(ctx context.Context, tenantID, sourceID string, c
 	now := time.Now()
 
 	err = p.storage.WithWriter(ctx, tenantID, func(ctx context.Context, q storage.Querier) error {
+		p.markFullTextStale(tenantID)
 		// Delete existing document if re-indexing
 		_, _ = q.ExecContext(ctx, `DELETE FROM chunks WHERE document_id IN (SELECT id FROM documents WHERE source_id = ? AND file_path = ?)`, sourceID, file.Path)
 		_, _ = q.ExecContext(ctx, `DELETE FROM documents WHERE source_id = ? AND file_path = ?`, sourceID, file.Path)
@@ -513,6 +514,7 @@ func (p *Pipeline) runDocumentUpsert(ctx context.Context, req DocumentUpsertRequ
 		return
 	}
 	err = storage.WithAtomicWriter(ctx, p.storage, req.TenantID, func(ctx context.Context, q storage.Querier) error {
+		p.markFullTextStale(req.TenantID)
 		if _, err := q.ExecContext(ctx, `DELETE FROM chunks WHERE tenant_id = ? AND document_id = ?`, req.TenantID, result.DocumentID); err != nil {
 			return err
 		}
@@ -557,6 +559,15 @@ func (p *Pipeline) insertChunks(ctx context.Context, q storage.Querier, tenantID
 		}
 	}
 	return nil
+}
+
+// markFullTextStale tells the BM25 index that chunks of tenantID are changing.
+// It must be called from inside the tenant writer, before the write, so that a
+// rebuild cannot run between the write and its marking.
+func (p *Pipeline) markFullTextStale(tenantID string) {
+	if indexer, ok := p.storage.(storage.FullTextIndexer); ok {
+		indexer.MarkFullTextStale(tenantID)
+	}
 }
 
 func intValue(value any) int {
@@ -605,6 +616,7 @@ func (p *Pipeline) getExistingDocuments(ctx context.Context, tenantID, sourceID 
 
 func (p *Pipeline) deleteDocument(ctx context.Context, tenantID, sourceID, filePath string) {
 	_ = p.storage.WithWriter(ctx, tenantID, func(ctx context.Context, q storage.Querier) error {
+		p.markFullTextStale(tenantID)
 		_, _ = q.ExecContext(ctx, `DELETE FROM chunks WHERE document_id IN (SELECT id FROM documents WHERE source_id = ? AND file_path = ?)`, sourceID, filePath)
 		_, err := q.ExecContext(ctx, `DELETE FROM documents WHERE source_id = ? AND file_path = ?`, sourceID, filePath)
 		return err

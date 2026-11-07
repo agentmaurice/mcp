@@ -17,13 +17,22 @@ func main() {
 		return
 	}
 
+	transport := flag.String("transport", "sse", "Transport mode: sse, stdio, both")
+	prefetch := flag.Bool("prefetch-extensions", false, "install the DuckDB fts extension into $HOME/.duckdb and exit (image build step)")
+	flag.Parse()
+
+	if *prefetch {
+		if err := runPrefetchExtensions(); err != nil {
+			fmt.Fprintf(os.Stderr, "prefetch-extensions: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	// Sidecar self-registration (no-op in standalone mode).
 	if _, err := sidecar.RegisterIfConfigured(context.Background()); err != nil {
 		log.Printf("[sidecar] registration failed: %v", err)
 	}
-
-	transport := flag.String("transport", "sse", "Transport mode: sse, stdio, both")
-	flag.Parse()
 
 	application, err := app.New()
 	if err != nil {

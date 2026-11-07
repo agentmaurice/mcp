@@ -65,6 +65,9 @@ func (t *IndexesEnsureTool) Definition() mcp.Tool {
 	}
 }
 
+// singleColumnIndexRefusal explains why memory.indexes.ensure refuses one-column indexes.
+const singleColumnIndexRefusal = "single-column indexes are refused: with DuckDB 1.4.1, an equality filter on a single-column index returns no row after a checkpoint and a reopen (AGENT-1049, see README). Index two or more columns."
+
 func (t *IndexesEnsureTool) Handler() ToolHandler {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var args struct {
@@ -104,6 +107,12 @@ func (t *IndexesEnsureTool) Handler() ToolHandler {
 				}
 				if !security.IsAllowedObject(item.IndexName, t.cfg.Security.AllowedIndexes) {
 					return fmt.Errorf("index %s is not allowed", item.IndexName)
+				}
+				if len(item.Columns) == 0 {
+					return fmt.Errorf("columns are required")
+				}
+				if len(item.Columns) == 1 {
+					return fmt.Errorf("%s", singleColumnIndexRefusal)
 				}
 				for _, col := range item.Columns {
 					if !identifierReSimple.MatchString(col) {

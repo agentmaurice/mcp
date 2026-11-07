@@ -1,26 +1,28 @@
 {
   "schema_version": "agentmaurice.mcp-catalog/v1",
-  "generated_at": "2026-10-01T08:59:19Z",
+  "generated_at": "2026-11-07T10:56:07Z",
   "repository": "https://github.com/agentmaurice/mcp",
   "registry": "ghcr.io/agentmaurice/mcp",
   "servers": [
     {
       "slug": "api",
       "kind": "server",
-      "version": "v0.1.4",
-      "commit": "27b137e366eab3659737f97d67c54d878eea8865",
+      "version": "v0.1.5",
+      "commit": "8c03e045cbecd75e6cdbc14b5eefa82d62dab0cb",
       "description": "Go MCP server for calling internal APIs described by an approved OpenAPI 3.0 or 3.1 contract. It only invokes a known `operationId`; it is not a generic HTTP proxy.",
       "sidecar_compatible": true,
       "one_compatible": true,
-      "one_notes": null,
-      "requires": [],
-      "install_image": "ghcr.io/agentmaurice/mcp/api-sidecar:v0.1.4@sha256:e56d861923acc7953b85e3561392e8afea1a6b11e4fe53a772531327545792f0",
+      "one_notes": "Refuses every call until MCP_API_ALLOWED_HOSTS lists the hosts it may reach (comma-separated; HTTPS required).",
+      "requires": [
+        "allowed-hosts"
+      ],
+      "install_image": "ghcr.io/agentmaurice/mcp/api-sidecar:v0.1.5@sha256:9da81e142c16e6c9485df4b0f7dfe47735a5287031284247ae30630c2ae6f1a9",
       "images": [
         {
           "name": "api-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/api-sidecar:v0.1.4@sha256:e56d861923acc7953b85e3561392e8afea1a6b11e4fe53a772531327545792f0",
+          "ref": "ghcr.io/agentmaurice/mcp/api-sidecar:v0.1.5@sha256:9da81e142c16e6c9485df4b0f7dfe47735a5287031284247ae30630c2ae6f1a9",
           "role": "sidecar",
-          "digest": "sha256:e56d861923acc7953b85e3561392e8afea1a6b11e4fe53a772531327545792f0"
+          "digest": "sha256:9da81e142c16e6c9485df4b0f7dfe47735a5287031284247ae30630c2ae6f1a9"
         }
       ],
       "tools": [
@@ -51,20 +53,20 @@
     {
       "slug": "artifact",
       "kind": "server",
-      "version": "v0.1.4",
-      "commit": "41d326baf1d467c8b3ee79d732eb59794b54e501",
-      "description": "Go MCP server for creating, patching, rendering and inspecting deterministic deliverables. Every result carries a provenance manifest with format, MIME type, size, renderer and SHA-256.",
+      "version": "v0.2.1",
+      "commit": "4cb878c8c94ce20083404cb4aad789f6df802a49",
+      "description": "Go MCP server for creating, patching, rendering and inspecting deterministic deliverables. Every result carries a provenance manifest with format, MIME type, size, renderer and SHA-256. Version 0.2.0 adds the rendering engine of Document studio: it renders `template/v1` folders to PDF, PNG, HTML or text.",
       "sidecar_compatible": true,
       "one_compatible": true,
       "one_notes": null,
       "requires": [],
-      "install_image": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.1.4@sha256:999c87f737bc5ae6dfbe846ee826f6042f3881a73da44730ca5b31923d24694b",
+      "install_image": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.2.1@sha256:d1908504a4ae46c6098cb310ba85a8252d59ae681715a2a230e7f3e279401753",
       "images": [
         {
           "name": "artifact-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.1.4@sha256:999c87f737bc5ae6dfbe846ee826f6042f3881a73da44730ca5b31923d24694b",
+          "ref": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.2.1@sha256:d1908504a4ae46c6098cb310ba85a8252d59ae681715a2a230e7f3e279401753",
           "role": "sidecar",
-          "digest": "sha256:999c87f737bc5ae6dfbe846ee826f6042f3881a73da44730ca5b31923d24694b"
+          "digest": "sha256:d1908504a4ae46c6098cb310ba85a8252d59ae681715a2a230e7f3e279401753"
         }
       ],
       "tools": [
@@ -104,25 +106,25 @@
     {
       "slug": "brain",
       "kind": "server",
-      "version": "v1.1.7",
-      "commit": "96594dafc4bd6ab8eb45b6263d20d9079ae6c8cb",
+      "version": "v1.3.1",
+      "commit": "11586e0c3297b3e5f07a187a1baca4af9e22e211",
       "description": "Go MCP server that indexes an organization's knowledge (code, documentation, configuration) and retrieves the relevant context for AgentMaurice agents. It combines BM25 full-text search, vector search, a knowledge graph and hybrid fusion, with AST-aware chunking for code. Brain returns results, not generated answers: an agent uses it to locate context, and can then hand that context to MCP RAG for a reasoned answer.",
       "sidecar_compatible": true,
       "one_compatible": true,
       "one_notes": "Tool inventory is absent from this metadata; discover runtime tools after installation.",
       "requires": [],
-      "install_image": "ghcr.io/agentmaurice/mcp/brain-sidecar:v1.1.7@sha256:89324051cfcb6f95a5fa87d3f7125adc9a1b17df3855354bb653c98395c04b42",
+      "install_image": "ghcr.io/agentmaurice/mcp/brain-sidecar:v1.3.1@sha256:7616a87e90fec430fce13a25c7880df9fc63de369436dcdbdc8977385551c9f3",
       "images": [
         {
           "name": "brain",
-          "ref": "ghcr.io/agentmaurice/mcp/brain:v1.1.7",
+          "ref": "ghcr.io/agentmaurice/mcp/brain:v1.3.1",
           "role": "standalone"
         },
         {
           "name": "brain-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/brain-sidecar:v1.1.7@sha256:89324051cfcb6f95a5fa87d3f7125adc9a1b17df3855354bb653c98395c04b42",
+          "ref": "ghcr.io/agentmaurice/mcp/brain-sidecar:v1.3.1@sha256:7616a87e90fec430fce13a25c7880df9fc63de369436dcdbdc8977385551c9f3",
           "role": "sidecar",
-          "digest": "sha256:89324051cfcb6f95a5fa87d3f7125adc9a1b17df3855354bb653c98395c04b42"
+          "digest": "sha256:7616a87e90fec430fce13a25c7880df9fc63de369436dcdbdc8977385551c9f3"
         }
       ],
       "tools": [],
@@ -167,20 +169,20 @@
     {
       "slug": "data",
       "kind": "server",
-      "version": "v0.1.4",
-      "commit": "21ee5a7a7ae77d92cb3ec0af5dba7ce1c4ed8ba9",
+      "version": "v0.1.5",
+      "commit": "7205a87c7252973628be77bdfd480c87560679c0",
       "description": "Go MCP server for profiling and running one-off queries on CSV or JSON tables, without arbitrary SQL and without ingestion into MCP Memory.",
       "sidecar_compatible": true,
       "one_compatible": true,
       "one_notes": null,
       "requires": [],
-      "install_image": "ghcr.io/agentmaurice/mcp/data-sidecar:v0.1.4@sha256:86104db532af21d322342a9d8cc64c5201c2b46076062ad1ebb8a7b569078460",
+      "install_image": "ghcr.io/agentmaurice/mcp/data-sidecar:v0.1.5@sha256:754edbf5bdc928f9d8b6b00c175780feb560a0f599b52ecd35a3a5d29abd93ee",
       "images": [
         {
           "name": "data-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/data-sidecar:v0.1.4@sha256:86104db532af21d322342a9d8cc64c5201c2b46076062ad1ebb8a7b569078460",
+          "ref": "ghcr.io/agentmaurice/mcp/data-sidecar:v0.1.5@sha256:754edbf5bdc928f9d8b6b00c175780feb560a0f599b52ecd35a3a5d29abd93ee",
           "role": "sidecar",
-          "digest": "sha256:86104db532af21d322342a9d8cc64c5201c2b46076062ad1ebb8a7b569078460"
+          "digest": "sha256:754edbf5bdc928f9d8b6b00c175780feb560a0f599b52ecd35a3a5d29abd93ee"
         }
       ],
       "tools": [
@@ -216,8 +218,8 @@
     {
       "slug": "decision",
       "kind": "server",
-      "version": "v0.1.1",
-      "commit": "2ae53fcc0b587bd4e2a02c50f6820ad95d5428a1",
+      "version": "v0.2.0",
+      "commit": "f0804e2b14cf7c82c6e06ced002dd8ea3be9e4c3",
       "description": "Classify short, already extracted content, score it on an ordered scale, or ask a yes/no question using TypeSafe System One. Receive typed values and confidence without parsing generated prose. This server never executes a branch or writes to another system.",
       "sidecar_compatible": true,
       "one_compatible": true,
@@ -226,13 +228,13 @@
         "typesafe-api",
         "typesafe-api-key"
       ],
-      "install_image": "ghcr.io/agentmaurice/mcp/decision-sidecar:v0.1.1@sha256:462b8a10045bcc2496ff6f542a571bdc224e9ae69dd8451df5c35a453f560b4c",
+      "install_image": "ghcr.io/agentmaurice/mcp/decision-sidecar:v0.2.0@sha256:c40602371f48818f0ffebd2ce7caa37bde2a92ac87a6a5cb081047af3c20ff0e",
       "images": [
         {
           "name": "decision-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/decision-sidecar:v0.1.1@sha256:462b8a10045bcc2496ff6f542a571bdc224e9ae69dd8451df5c35a453f560b4c",
+          "ref": "ghcr.io/agentmaurice/mcp/decision-sidecar:v0.2.0@sha256:c40602371f48818f0ffebd2ce7caa37bde2a92ac87a6a5cb081047af3c20ff0e",
           "role": "sidecar",
-          "digest": "sha256:462b8a10045bcc2496ff6f542a571bdc224e9ae69dd8451df5c35a453f560b4c"
+          "digest": "sha256:c40602371f48818f0ffebd2ce7caa37bde2a92ac87a6a5cb081047af3c20ff0e"
         }
       ],
       "tools": [
@@ -271,8 +273,8 @@
     {
       "slug": "document",
       "kind": "server",
-      "version": "v0.1.1",
-      "commit": "5974d26e03de1f974049303f8b133e7eb8339247",
+      "version": "v0.1.2",
+      "commit": "c412f493a440ed5438e4be945e8f59fbcd13ede0",
       "description": "MCP Document converts office documents to Markdown locally for AgentMaurice agents. The service uses AnyDoc and exposes an MCP server over STDIO, designed to run behind the standard MCP sidecar.",
       "sidecar_compatible": true,
       "one_compatible": false,
@@ -281,13 +283,13 @@
         "storage-source",
         "accessible-document-image"
       ],
-      "install_image": "ghcr.io/agentmaurice/mcp/document-sidecar:v0.1.1@sha256:e1ffca334be0f54678f708c99ce71872c01935470c65743f34fa534b08b895c9",
+      "install_image": "ghcr.io/agentmaurice/mcp/document-sidecar:v0.1.2@sha256:a04ae529211403e8d0bbe455c23618722bb0008db40d8a4523ab6b61c19b8fe8",
       "images": [
         {
           "name": "document-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/document-sidecar:v0.1.1@sha256:e1ffca334be0f54678f708c99ce71872c01935470c65743f34fa534b08b895c9",
+          "ref": "ghcr.io/agentmaurice/mcp/document-sidecar:v0.1.2@sha256:a04ae529211403e8d0bbe455c23618722bb0008db40d8a4523ab6b61c19b8fe8",
           "role": "sidecar",
-          "digest": "sha256:e1ffca334be0f54678f708c99ce71872c01935470c65743f34fa534b08b895c9"
+          "digest": "sha256:a04ae529211403e8d0bbe455c23618722bb0008db40d8a4523ab6b61c19b8fe8"
         }
       ],
       "tools": [],
@@ -296,20 +298,20 @@
     {
       "slug": "guard",
       "kind": "server",
-      "version": "v0.1.4",
-      "commit": "e146c2c138a043c53797504f45f82e83e07b49db",
+      "version": "v0.1.5",
+      "commit": "60eb8cc334c9b42a031830ec46c948798a5b1f17",
       "description": "Deterministic Go MCP server for detecting, masking and classifying sensitive data. It complements MCP Moderator without replacing it: Moderator handles content safety, Guard handles PII, secrets and enterprise classification.",
       "sidecar_compatible": true,
       "one_compatible": true,
       "one_notes": null,
       "requires": [],
-      "install_image": "ghcr.io/agentmaurice/mcp/guard-sidecar:v0.1.4@sha256:adc8956705a182f50ad91d19f151bfef6d9c75712e78e465e2633a19acde2181",
+      "install_image": "ghcr.io/agentmaurice/mcp/guard-sidecar:v0.1.5@sha256:78c6009a60199cf13fdace967a6ea5909ada5127ec2b1d3dfe80b54721459ffb",
       "images": [
         {
           "name": "guard-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/guard-sidecar:v0.1.4@sha256:adc8956705a182f50ad91d19f151bfef6d9c75712e78e465e2633a19acde2181",
+          "ref": "ghcr.io/agentmaurice/mcp/guard-sidecar:v0.1.5@sha256:78c6009a60199cf13fdace967a6ea5909ada5127ec2b1d3dfe80b54721459ffb",
           "role": "sidecar",
-          "digest": "sha256:adc8956705a182f50ad91d19f151bfef6d9c75712e78e465e2633a19acde2181"
+          "digest": "sha256:78c6009a60199cf13fdace967a6ea5909ada5127ec2b1d3dfe80b54721459ffb"
         }
       ],
       "tools": [
@@ -345,32 +347,32 @@
     {
       "slug": "memory",
       "kind": "server",
-      "version": "v1.0.16",
-      "commit": "64aa21959676f1ede887df2d4f151aa959f70093",
+      "version": "v1.2.3",
+      "commit": "6be02c2d45420a310dc895467d05a19a1c0c2e84",
       "description": "MCP server providing a multi-tenant, read-safe SQL memory backed by DuckDB or PostgreSQL. Writes are handled by strict ingestion tools (no arbitrary SQL writes).",
       "sidecar_compatible": true,
       "one_compatible": true,
       "one_notes": "Tool inventory is absent from this metadata; discover runtime tools after installation.",
       "requires": [],
-      "install_image": "ghcr.io/agentmaurice/mcp/memory-sidecar:v1.0.16@sha256:9f6622e15f2703b201a9c1252f1114a65671f15e060292bc19be479ba971e973",
+      "install_image": "ghcr.io/agentmaurice/mcp/memory-sidecar:v1.2.3@sha256:22f9ccfe224f12ad15b00d26347992069d810c1492ed6c6fdc0774b124f5e6a8",
       "images": [
         {
           "name": "memory-duckdb",
-          "ref": "ghcr.io/agentmaurice/mcp/memory-duckdb:v1.0.16@sha256:326a5dd2734e271c0a14651dada3503cdcbefd9c8514d3fad853f03e478ac4c1",
+          "ref": "ghcr.io/agentmaurice/mcp/memory-duckdb:v1.2.3@sha256:4b147cfd513458d03ed77ab299b907b5c1f44b76fa5d10e19726cc5ed9b96df9",
           "role": "standalone",
-          "digest": "sha256:326a5dd2734e271c0a14651dada3503cdcbefd9c8514d3fad853f03e478ac4c1"
+          "digest": "sha256:4b147cfd513458d03ed77ab299b907b5c1f44b76fa5d10e19726cc5ed9b96df9"
         },
         {
           "name": "memory-postgres",
-          "ref": "ghcr.io/agentmaurice/mcp/memory-postgres:v1.0.16@sha256:c1091a969dad958c87151021a57c40a6d0e0c00d1e1c880ad44b0d4f7bb959f6",
+          "ref": "ghcr.io/agentmaurice/mcp/memory-postgres:v1.2.3@sha256:072394259202aae2a113406150119ad012104a4d9bc576bb235a4dcb1bce928e",
           "role": "standalone",
-          "digest": "sha256:c1091a969dad958c87151021a57c40a6d0e0c00d1e1c880ad44b0d4f7bb959f6"
+          "digest": "sha256:072394259202aae2a113406150119ad012104a4d9bc576bb235a4dcb1bce928e"
         },
         {
           "name": "memory-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/memory-sidecar:v1.0.16@sha256:9f6622e15f2703b201a9c1252f1114a65671f15e060292bc19be479ba971e973",
+          "ref": "ghcr.io/agentmaurice/mcp/memory-sidecar:v1.2.3@sha256:22f9ccfe224f12ad15b00d26347992069d810c1492ed6c6fdc0774b124f5e6a8",
           "role": "sidecar",
-          "digest": "sha256:9f6622e15f2703b201a9c1252f1114a65671f15e060292bc19be479ba971e973"
+          "digest": "sha256:22f9ccfe224f12ad15b00d26347992069d810c1492ed6c6fdc0774b124f5e6a8"
         }
       ],
       "tools": [],
@@ -379,20 +381,20 @@
     {
       "slug": "observe",
       "kind": "server",
-      "version": "v0.1.4",
-      "commit": "67a98972aab00c498f261f3626da84fcd6002a48",
+      "version": "v0.2.2",
+      "commit": "4e4c79562968781fdcdfd090d0a4e1cf082dde4b",
       "description": "Deterministic diagnostic Go MCP server for OTLP JSON exports and already redacted run summaries. It normalizes a timeline, computes the critical path and highlights errors, retries and regressions between two runs.",
       "sidecar_compatible": true,
       "one_compatible": true,
       "one_notes": null,
       "requires": [],
-      "install_image": "ghcr.io/agentmaurice/mcp/observe-sidecar:v0.1.4@sha256:de9fa53069ad2304bf438534a02c236713c23a457b300d5884346e0dae9e0aaa",
+      "install_image": "ghcr.io/agentmaurice/mcp/observe-sidecar:v0.2.2@sha256:e8cb0f59ab636fc9127ce465939ddbeb8fa32b801d45e5c927080ef7bdf89256",
       "images": [
         {
           "name": "observe-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/observe-sidecar:v0.1.4@sha256:de9fa53069ad2304bf438534a02c236713c23a457b300d5884346e0dae9e0aaa",
+          "ref": "ghcr.io/agentmaurice/mcp/observe-sidecar:v0.2.2@sha256:e8cb0f59ab636fc9127ce465939ddbeb8fa32b801d45e5c927080ef7bdf89256",
           "role": "sidecar",
-          "digest": "sha256:de9fa53069ad2304bf438534a02c236713c23a457b300d5884346e0dae9e0aaa"
+          "digest": "sha256:e8cb0f59ab636fc9127ce465939ddbeb8fa32b801d45e5c927080ef7bdf89256"
         }
       ],
       "tools": [
@@ -428,8 +430,8 @@
     {
       "slug": "ocr",
       "kind": "server",
-      "version": "v0.1.3",
-      "commit": "03a8c3989f6b466c11566bfe319f2392c3e10249",
+      "version": "v0.1.4",
+      "commit": "bec9f21b4801d814c125849555fa3995bcd71b3d",
       "description": "Managed, synchronous OCR MCP server. The service holds no provider key: it calls the authenticated bridge of the AgentMaurice instance, which forwards the request to the hosted LLM Gateway.",
       "sidecar_compatible": true,
       "one_compatible": true,
@@ -438,13 +440,13 @@
         "hosted-ocr-bridge",
         "sidecar-credentials"
       ],
-      "install_image": "ghcr.io/agentmaurice/mcp/ocr-sidecar:v0.1.3@sha256:39983fedcc0c1a0d4da5a9c367ec9e62cfe305a2125201a9018f921eac6bd2c9",
+      "install_image": "ghcr.io/agentmaurice/mcp/ocr-sidecar:v0.1.4@sha256:0439b5c921684191d81c4c280104cf6e68713c849383b2ef7f1e14d5019ac92a",
       "images": [
         {
           "name": "ocr-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/ocr-sidecar:v0.1.3@sha256:39983fedcc0c1a0d4da5a9c367ec9e62cfe305a2125201a9018f921eac6bd2c9",
+          "ref": "ghcr.io/agentmaurice/mcp/ocr-sidecar:v0.1.4@sha256:0439b5c921684191d81c4c280104cf6e68713c849383b2ef7f1e14d5019ac92a",
           "role": "sidecar",
-          "digest": "sha256:39983fedcc0c1a0d4da5a9c367ec9e62cfe305a2125201a9018f921eac6bd2c9"
+          "digest": "sha256:0439b5c921684191d81c4c280104cf6e68713c849383b2ef7f1e14d5019ac92a"
         }
       ],
       "tools": [],
@@ -485,8 +487,8 @@
     {
       "slug": "search",
       "kind": "server",
-      "version": "v0.1.1",
-      "commit": "ac5524055aa76b0c0ced3e9d19b3229b23378095",
+      "version": "v0.1.2",
+      "commit": "ecac8b960c1f6a1d6f64a83cbb93788118577f1a",
       "description": "AgentMaurice MCP server for hybrid search on Meilisearch. It returns passages and their provenance, without an LLM answer.",
       "sidecar_compatible": true,
       "one_compatible": false,
@@ -494,13 +496,13 @@
       "requires": [
         "meilisearch"
       ],
-      "install_image": "ghcr.io/agentmaurice/mcp/search-sidecar:v0.1.1@sha256:f0d9d95852e3a4093bc56afd32e36134ee00387676cd634eed5e8b6962604890",
+      "install_image": "ghcr.io/agentmaurice/mcp/search-sidecar:v0.1.2@sha256:126c69d692ba50fc971f5d48e8b91188b71bfc21069c596fa4cac34479c8bc72",
       "images": [
         {
           "name": "search-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/search-sidecar:v0.1.1@sha256:f0d9d95852e3a4093bc56afd32e36134ee00387676cd634eed5e8b6962604890",
+          "ref": "ghcr.io/agentmaurice/mcp/search-sidecar:v0.1.2@sha256:126c69d692ba50fc971f5d48e8b91188b71bfc21069c596fa4cac34479c8bc72",
           "role": "sidecar",
-          "digest": "sha256:f0d9d95852e3a4093bc56afd32e36134ee00387676cd634eed5e8b6962604890"
+          "digest": "sha256:126c69d692ba50fc971f5d48e8b91188b71bfc21069c596fa4cac34479c8bc72"
         }
       ],
       "tools": [
@@ -531,44 +533,44 @@
     {
       "slug": "sidecar",
       "kind": "runtime",
-      "version": "v0.1.0",
-      "commit": "8c9861350d162d8434a7e1ac924e714042d8ac4e",
-      "description": "Runtime sidecar des serveurs MCP AgentMaurice : un binaire Go autonome qui enregistre un serveur MCP auprès d'une instance AgentMaurice (token bootstrap), conserve et renouvelle ses credentials, expose un état de santé et relaie les appels MCP entre l'instance (MQTT) et le serveur local (stdio).",
+      "version": "v0.1.3",
+      "commit": "e17f548521162a9af6a90d6f892155a54636398b",
+      "description": "Runtime sidecar for AgentMaurice MCP servers: a standalone Go binary that registers an MCP server with an AgentMaurice instance (bootstrap token), stores and renews its credentials, exposes a health status, and relays MCP calls between the instance (MQTT) and the local server (stdio).",
       "sidecar_compatible": true,
       "one_compatible": true,
       "one_notes": null,
       "requires": [],
-      "install_image": "ghcr.io/agentmaurice/mcp/mcp-sidecar:v0.1.0@sha256:cbdf53ec9c23784303ee358bbb6d57a88a0ffb743ea1b6e7ab378580ab9f398c",
+      "install_image": "ghcr.io/agentmaurice/mcp/mcp-sidecar:v0.1.3@sha256:059e925f1da077151095a6645270d14143081f6d1e533a0f3ef41673c074ed5d",
       "images": [
         {
           "name": "mcp-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/mcp-sidecar:v0.1.0@sha256:cbdf53ec9c23784303ee358bbb6d57a88a0ffb743ea1b6e7ab378580ab9f398c",
+          "ref": "ghcr.io/agentmaurice/mcp/mcp-sidecar:v0.1.3@sha256:059e925f1da077151095a6645270d14143081f6d1e533a0f3ef41673c074ed5d",
           "role": "sidecar",
-          "digest": "sha256:cbdf53ec9c23784303ee358bbb6d57a88a0ffb743ea1b6e7ab378580ab9f398c"
+          "digest": "sha256:059e925f1da077151095a6645270d14143081f6d1e533a0f3ef41673c074ed5d"
         },
         {
           "name": "mcp-sidecar-python",
-          "ref": "ghcr.io/agentmaurice/mcp/mcp-sidecar-python:v0.1.0@sha256:76d0ac387383e519285953c89d927c89878c5a693fffc7a91340ad25270a48f8",
+          "ref": "ghcr.io/agentmaurice/mcp/mcp-sidecar-python:v0.1.3@sha256:dc78bbeb57cb1eb0b6a564d1fe48c1186f7c32e0bf2b70b698a01dc9a8c85dc1",
           "role": "sidecar",
-          "digest": "sha256:76d0ac387383e519285953c89d927c89878c5a693fffc7a91340ad25270a48f8"
+          "digest": "sha256:dc78bbeb57cb1eb0b6a564d1fe48c1186f7c32e0bf2b70b698a01dc9a8c85dc1"
         },
         {
           "name": "mcp-sidecar-node",
-          "ref": "ghcr.io/agentmaurice/mcp/mcp-sidecar-node:v0.1.0@sha256:1468436b1b22c3f6250de66a5ee07aff9eaea67c721e2b8cc052fcac7e32a4ad",
+          "ref": "ghcr.io/agentmaurice/mcp/mcp-sidecar-node:v0.1.3@sha256:d18501e420870976ff218ecb9e5b86a4b266a7247e46009a15c69227c84c86dc",
           "role": "sidecar",
-          "digest": "sha256:1468436b1b22c3f6250de66a5ee07aff9eaea67c721e2b8cc052fcac7e32a4ad"
+          "digest": "sha256:d18501e420870976ff218ecb9e5b86a4b266a7247e46009a15c69227c84c86dc"
         },
         {
           "name": "mcp-sidecar-go",
-          "ref": "ghcr.io/agentmaurice/mcp/mcp-sidecar-go:v0.1.0@sha256:b8dff370f3b69707b288c4e964a49a77d962672bca05a70ae64b921844a3013c",
+          "ref": "ghcr.io/agentmaurice/mcp/mcp-sidecar-go:v0.1.3@sha256:84dbfcba73e6d740a88bf57959a2b445741194f3bc9bc0d63d8df227c2acaa50",
           "role": "sidecar",
-          "digest": "sha256:b8dff370f3b69707b288c4e964a49a77d962672bca05a70ae64b921844a3013c"
+          "digest": "sha256:84dbfcba73e6d740a88bf57959a2b445741194f3bc9bc0d63d8df227c2acaa50"
         },
         {
           "name": "mcp-sidecar-docker",
-          "ref": "ghcr.io/agentmaurice/mcp/mcp-sidecar-docker:v0.1.0@sha256:6a13c8360dc3e000d66e71719ac33da658e8038d3a42321fd4e5ed1b73246873",
+          "ref": "ghcr.io/agentmaurice/mcp/mcp-sidecar-docker:v0.1.3@sha256:17473706c5c70e20f01a202fb2e4b29e9911951b1c38fadb41c55095175f55b9",
           "role": "sidecar",
-          "digest": "sha256:6a13c8360dc3e000d66e71719ac33da658e8038d3a42321fd4e5ed1b73246873"
+          "digest": "sha256:17473706c5c70e20f01a202fb2e4b29e9911951b1c38fadb41c55095175f55b9"
         }
       ],
       "tools": [],
@@ -577,8 +579,8 @@
     {
       "slug": "ssh",
       "kind": "server",
-      "version": "v0.1.2",
-      "commit": "ed7a52fc540dec8c8848c87e4f7477479110e570",
+      "version": "v0.2.1",
+      "commit": "a17cd692f2976760f7a4a0f2fe696389c8e91e55",
       "description": "Go MCP server for governed remote administration over published SSH targets. The Run only picks a known `target_id`; the destination, identity, host key and credential reference stay in the local projection.",
       "sidecar_compatible": true,
       "one_compatible": true,
@@ -588,13 +590,13 @@
         "ssh-credentials",
         "verified-host-keys"
       ],
-      "install_image": "ghcr.io/agentmaurice/mcp/ssh-sidecar:v0.1.2@sha256:3dbd12ca377a76a3fe7670ed4fb25c27b4942ea494469b6f6f3a4b0f3676ea1d",
+      "install_image": "ghcr.io/agentmaurice/mcp/ssh-sidecar:v0.2.1@sha256:0713a804fddccdbdddbc4af6363d7c688cad7f0ea4f23c0bba642ffad838deae",
       "images": [
         {
           "name": "ssh-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/ssh-sidecar:v0.1.2@sha256:3dbd12ca377a76a3fe7670ed4fb25c27b4942ea494469b6f6f3a4b0f3676ea1d",
+          "ref": "ghcr.io/agentmaurice/mcp/ssh-sidecar:v0.2.1@sha256:0713a804fddccdbdddbc4af6363d7c688cad7f0ea4f23c0bba642ffad838deae",
           "role": "sidecar",
-          "digest": "sha256:3dbd12ca377a76a3fe7670ed4fb25c27b4942ea494469b6f6f3a4b0f3676ea1d"
+          "digest": "sha256:0713a804fddccdbdddbc4af6363d7c688cad7f0ea4f23c0bba642ffad838deae"
         }
       ],
       "tools": [

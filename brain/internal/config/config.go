@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/spf13/viper"
 )
@@ -38,6 +39,11 @@ type StorageConfig struct {
 	PostgresDSN          string `mapstructure:"postgres_dsn"`
 	PostgresSchemaPrefix string `mapstructure:"postgres_schema_prefix"`
 	DuckDBHTTPURL        string `mapstructure:"duckdb_http_url" json:"duckdb_http_url"`
+	// DuckDBExtensionDir is the DuckDB extension_directories root. When set, every
+	// database connection uses it before any LOAD or INSTALL, and the image build
+	// installs fts there. DuckDB adds <duckdb version>/<platform>/ below it. Empty
+	// keeps DuckDB's default ($HOME/.duckdb/extensions).
+	DuckDBExtensionDir string `mapstructure:"duckdb_extension_dir" json:"duckdb_extension_dir"`
 }
 
 // EmbeddingConfig represents embedding provider configuration.
@@ -70,6 +76,37 @@ type SearchConfig struct {
 	TimeoutMs          int     `mapstructure:"timeout_ms"`
 	HybridDefaultAlpha float64 `mapstructure:"hybrid_default_alpha"`
 	RRFK               int     `mapstructure:"rrf_k"`
+	// FTSStemmer is the DuckDB FTS stemmer of the BM25 index (default "porter").
+	FTSStemmer string `mapstructure:"fts_stemmer"`
+	// FTSStopwords is "none", "english" or a stopword table name (default "none").
+	FTSStopwords string `mapstructure:"fts_stopwords"`
+}
+
+// ftsStemmers lists the stemmers accepted by DuckDB's create_fts_index.
+var ftsStemmers = map[string]bool{
+	"arabic": true, "basque": true, "catalan": true, "danish": true, "dutch": true,
+	"english": true, "finnish": true, "french": true, "german": true, "greek": true,
+	"hindi": true, "hungarian": true, "indonesian": true, "irish": true, "italian": true,
+	"lithuanian": true, "nepali": true, "norwegian": true, "porter": true, "portuguese": true,
+	"romanian": true, "russian": true, "serbian": true, "spanish": true, "swedish": true,
+	"tamil": true, "turkish": true, "none": true,
+}
+
+var ftsStopwordTable = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,62}$`)
+
+// ValidateFullTextSettings checks the stemmer and stopwords before they are
+// interpolated into the FTS PRAGMA. Only whitelisted values pass.
+func ValidateFullTextSettings(stemmer, stopwords string) error {
+	if !ftsStemmers[stemmer] {
+		return fmt.Errorf("search.fts_stemmer %q is not a supported DuckDB stemmer", stemmer)
+	}
+	if stopwords == "none" || stopwords == "english" {
+		return nil
+	}
+	if !ftsStopwordTable.MatchString(stopwords) {
+		return fmt.Errorf("search.fts_stopwords %q must be none, english or a table name", stopwords)
+	}
+	return nil
 }
 
 // BufferConfig represents buffer service configuration for large payload handling.
@@ -115,6 +152,7 @@ func Load() (*Config, error) {
 	_ = viper.BindEnv("storage.postgres_dsn", "BRAIN_POSTGRES_DSN")
 	_ = viper.BindEnv("storage.postgres_schema_prefix", "BRAIN_POSTGRES_SCHEMA_PREFIX")
 	_ = viper.BindEnv("storage.duckdb_http_url", "BRAIN_STORAGE_DUCKDB_HTTP_URL")
+	_ = viper.BindEnv("storage.duckdb_extension_dir", "BRAIN_DUCKDB_EXTENSION_DIR")
 
 	// Embedding env
 	_ = viper.BindEnv("embedding.provider", "BRAIN_EMBEDDING_PROVIDER")
@@ -141,6 +179,8 @@ func Load() (*Config, error) {
 	_ = viper.BindEnv("search.timeout_ms", "BRAIN_SEARCH_TIMEOUT_MS")
 	_ = viper.BindEnv("search.hybrid_default_alpha", "BRAIN_SEARCH_HYBRID_DEFAULT_ALPHA")
 	_ = viper.BindEnv("search.rrf_k", "BRAIN_SEARCH_RRF_K")
+	_ = viper.BindEnv("search.fts_stemmer", "BRAIN_SEARCH_FTS_STEMMER")
+	_ = viper.BindEnv("search.fts_stopwords", "BRAIN_SEARCH_FTS_STOPWORDS")
 
 	// Buffer env
 	_ = viper.BindEnv("buffer.enabled", "BUFFER_ENABLED")
@@ -190,6 +230,8 @@ func Load() (*Config, error) {
 	viper.SetDefault("search.timeout_ms", 5000)
 	viper.SetDefault("search.hybrid_default_alpha", 0.6)
 	viper.SetDefault("search.rrf_k", 60)
+	viper.SetDefault("search.fts_stemmer", "porter")
+	viper.SetDefault("search.fts_stopwords", "none")
 
 	viper.SetDefault("buffer.namespace", "brain")
 	viper.SetDefault("buffer.soft_threshold", 512*1024)
@@ -209,6 +251,9 @@ func Load() (*Config, error) {
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+	if err := ValidateFullTextSettings(cfg.Search.FTSStemmer, cfg.Search.FTSStopwords); err != nil {
+		return nil, err
 	}
 
 	return &cfg, nil

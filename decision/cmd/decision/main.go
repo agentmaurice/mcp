@@ -14,6 +14,7 @@ import (
 
 	"github.com/agentmaurice/mcpchatui/mcp/decision/internal/mcpserver"
 	"github.com/agentmaurice/mcpchatui/mcp/decision/pkg/systemone"
+	"github.com/agentmaurice/mcpchatui/mcp/decision/telemetry"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/viper"
 )
@@ -27,6 +28,11 @@ func main() {
 	}
 }
 func run() error {
+	shutdownTelemetry, err := telemetry.Init(context.Background())
+	if err != nil {
+		return err
+	}
+	defer func() { _ = shutdownTelemetry(context.Background()) }()
 	v := viper.New()
 	v.SetEnvPrefix("MCP_DECISION")
 	v.AutomaticEnv()

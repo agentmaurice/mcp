@@ -35,7 +35,9 @@
     "max_results_limit": 100,
     "timeout_ms": 5000,
     "hybrid_default_alpha": 0.6,
-    "rrf_k": 60
+    "rrf_k": 60,
+    "fts_stemmer": "porter",
+    "fts_stopwords": "none"
   },
   "buffer": {
     "enabled": false,

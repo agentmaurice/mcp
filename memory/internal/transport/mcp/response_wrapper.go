@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/logging"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/platform/buffer"
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 	"go.uber.org/zap"
@@ -68,14 +69,14 @@ func (w *ResponseWrapper) WrapToolResult(
 			w.logger.Warn("Buffer storage failed, falling back to direct response",
 				zap.String("tool", toolName),
 				zap.Int64("size", size),
-				zap.Error(err),
+				logging.ErrorClass(err),
 			)
 			return w.createDirectResult(responseBytes), nil
 		}
 		w.logger.Info("Tool response buffered",
 			zap.String("tool", toolName),
 			zap.Int64("size", size),
-			zap.String("summary", truncateString(summary, 100)),
+			logging.Size("summary", summary),
 		)
 		return result, nil
 	}
@@ -107,7 +108,7 @@ func (w *ResponseWrapper) WrapResourceContents(
 			w.logger.Warn("Buffer storage failed for resource, falling back to direct response",
 				zap.String("uri", uri),
 				zap.Int64("size", size),
-				zap.Error(err),
+				logging.ErrorClass(err),
 			)
 			return w.createDirectResource(uri, payloadBytes), nil
 		}
@@ -164,7 +165,7 @@ func (w *ResponseWrapper) WrapDocumentResource(
 	if err != nil {
 		w.logger.Warn("Failed to buffer document, returning truncated response",
 			zap.String("uri", uri),
-			zap.Error(err),
+			logging.ErrorClass(err),
 		)
 		// Fallback: return document metadata + first few chunks
 		return w.createTruncatedDocumentResponse(uri, document, chunks), nil

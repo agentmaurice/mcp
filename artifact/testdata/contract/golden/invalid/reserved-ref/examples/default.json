@@ -1,0 +1,43 @@
+{
+  "reference": "AFF-2026-017",
+  "customer": {
+    "name": "Cabinet Fictif & Associés",
+    "address_lines": ["12 avenue de l'Échantillon", "00000 Exemple-sur-Seine"],
+    "contact": "Mme Dupont (exemple), contact@fictif.invalid"
+  },
+  "lines": [
+    {
+      "description": "Atelier de cadrage (2 demi-journées) #1",
+      "quantity": "2 forfaits",
+      "unit_price_ht": "600,00 €",
+      "vat_rate": "20 %",
+      "total_ht": "1 200,00 €"
+    },
+    {
+      "description": "Développement du prototype_v1 [lot A]",
+      "quantity": "5 jours",
+      "unit_price_ht": "700,00 €",
+      "vat_rate": "20 %",
+      "total_ht": "3 500,00 €"
+    },
+    {
+      "description": "Documentation et formation",
+      "quantity": "1 jour",
+      "unit_price_ht": "650,00 €",
+      "vat_rate": "20 %",
+      "total_ht": "650,00 €"
+    }
+  ],
+  "totals": {
+    "total_ht": "5 350,00 €",
+    "vat": [{ "rate": "20 %", "amount": "1 070,00 €" }],
+    "total_ttc": "6 420,00 €"
+  },
+  "valid_until": "2026-12-06",
+  "terms": [
+    "Acompte de 30 % à la commande.",
+    "Livraison sous 6 semaines après acompte.",
+    "Toute prestation supplémentaire fait l'objet d'un avenant."
+  ],
+  "payment_terms": "30 jours à réception de facture, par virement."
+}

@@ -78,17 +78,21 @@ func EnsureSchema(ctx context.Context, db *sql.DB) error {
 			created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
 
-		// Indexes for common queries
-		`CREATE INDEX IF NOT EXISTS idx_sources_tenant ON sources(tenant_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_documents_tenant ON documents(tenant_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_documents_source ON documents(source_id)`,
+		// Indexes. Single-column indexes are not created: with DuckDB 1.4.1, an equality
+		// filter on them returns no row after a checkpoint and a reopen (AGENT-1049).
+		// Each tenant has its own file, so full scans stay correct. The composite
+		// indexes below survive the same cycle (verified). Single-column indexes left by
+		// earlier versions are dropped on open.
 		`CREATE INDEX IF NOT EXISTS idx_documents_hash ON documents(tenant_id, source_id, content_hash)`,
-		`CREATE INDEX IF NOT EXISTS idx_chunks_tenant ON chunks(tenant_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_chunks_document ON chunks(document_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_chunks_type ON chunks(tenant_id, chunk_type)`,
 		`CREATE INDEX IF NOT EXISTS idx_chunks_symbol ON chunks(tenant_id, symbol_name)`,
-		`CREATE INDEX IF NOT EXISTS idx_index_jobs_tenant ON index_jobs(tenant_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_index_jobs_source ON index_jobs(source_id)`,
+		`DROP INDEX IF EXISTS idx_sources_tenant`,
+		`DROP INDEX IF EXISTS idx_documents_tenant`,
+		`DROP INDEX IF EXISTS idx_documents_source`,
+		`DROP INDEX IF EXISTS idx_chunks_tenant`,
+		`DROP INDEX IF EXISTS idx_chunks_document`,
+		`DROP INDEX IF EXISTS idx_index_jobs_tenant`,
+		`DROP INDEX IF EXISTS idx_index_jobs_source`,
 	}
 
 	for _, migration := range migrations {

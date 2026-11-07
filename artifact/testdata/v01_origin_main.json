@@ -1,0 +1,292 @@
+{
+  "00-render-markdown-pdf": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "structuredContent": {
+        "artifact": {
+          "content_base64": "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA1OTUgODQyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA1IDAgUiA+PiA+PiAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA0MiA+PgpzdHJlYW0KQlQgL0YxIDExIFRmIDUwIDc5MCBUZCAxNCBUTCAoSGVsbG8pIFRqIEVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago8PCAvVHlwZSAvRm9udCAvU3VidHlwZSAvVHlwZTEgL0Jhc2VGb250IC9IZWx2ZXRpY2EgPj4KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI0MSAwMDAwMCBuIAowMDAwMDAwMzMzIDAwMDAwIG4gCnRyYWlsZXIgPDwgL1NpemUgNiAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKNDAzCiUlRU9GCg==",
+          "preview": "PDF preview generated",
+          "manifest": {
+            "format": "pdf",
+            "mime_type": "application/pdf",
+            "bytes": 586,
+            "sha256": "04a6bb0d57255ec282824d67df6f53b151aa4515ea4a5b21ecc47f0a8c829088",
+            "renderer": "agentmaurice-artifact",
+            "renderer_version": "0.1.0"
+          }
+        },
+        "status": "ok"
+      }
+    }
+  },
+  "01-render-html-pdf": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "structuredContent": {
+        "artifact": {
+          "content_base64": "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA1OTUgODQyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA1IDAgUiA+PiA+PiAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA2MiA+PgpzdHJlYW0KQlQgL0YxIDExIFRmIDUwIDc5MCBUZCAxNCBUTCAoVGl0bGVCb2R5IFwod2l0aFwpIHBhcmVucykgVGogRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjQxIDAwMDAwIG4gCjAwMDAwMDAzNTMgMDAwMDAgbiAKdHJhaWxlciA8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo0MjMKJSVFT0YK",
+          "preview": "PDF preview generated",
+          "manifest": {
+            "format": "pdf",
+            "mime_type": "application/pdf",
+            "bytes": 606,
+            "sha256": "ebfb8f541c0187eca8ecba56ce0a1baf826648e632c23cc1cd4758ec2df60d52",
+            "renderer": "agentmaurice-artifact",
+            "renderer_version": "0.1.0"
+          }
+        },
+        "status": "ok"
+      }
+    }
+  },
+  "02-render-bad-output": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "isError": true,
+      "structuredContent": {
+        "error": "artifact_render_failed",
+        "message": "v0.1 preview format must be pdf"
+      }
+    }
+  },
+  "03-render-bad-format": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "isError": true,
+      "structuredContent": {
+        "error": "artifact_render_failed",
+        "message": "only markdown and html can be rendered"
+      }
+    }
+  },
+  "04-create-markdown": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "structuredContent": {
+        "artifact": {
+          "content_base64": "IyBEb2M=",
+          "preview": "# Doc",
+          "manifest": {
+            "format": "markdown",
+            "mime_type": "text/markdown",
+            "bytes": 5,
+            "sha256": "5fcd98224e6fd373b9025bde1aefea5e9d4400bd1993f81416f1f6d5d11fd74b",
+            "renderer": "agentmaurice-artifact",
+            "renderer_version": "0.1.0"
+          }
+        },
+        "status": "ok"
+      }
+    }
+  },
+  "05-create-html": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "structuredContent": {
+        "artifact": {
+          "content_base64": "PHA+eDwvcD4=",
+          "preview": "\u003cp\u003ex\u003c/p\u003e",
+          "manifest": {
+            "format": "html",
+            "mime_type": "text/html",
+            "bytes": 8,
+            "sha256": "31d8e07ec305ac4e2515d1f0b1c8c603b3858044eb7d97807d6d0970838cb0be",
+            "renderer": "agentmaurice-artifact",
+            "renderer_version": "0.1.0"
+          }
+        },
+        "status": "ok"
+      }
+    }
+  },
+  "06-create-json": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "structuredContent": {
+        "artifact": {
+          "content_base64": "ewogICJhIjogMSwKICAiYiI6IFsKICAgIHRydWUsCiAgICBudWxsCiAgXQp9",
+          "preview": "{\n  \"a\": 1,\n  \"b\": [\n    true,\n    null\n  ]\n}",
+          "manifest": {
+            "format": "json",
+            "mime_type": "application/json",
+            "bytes": 45,
+            "sha256": "c8f7384831904404e4fbbdce024f79ab7d7c7466e89b789cdf0f1a9cd6de0423",
+            "renderer": "agentmaurice-artifact",
+            "renderer_version": "0.1.0"
+          }
+        },
+        "status": "ok"
+      }
+    }
+  },
+  "07-create-csv": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "structuredContent": {
+        "artifact": {
+          "content_base64": "YSxiCjEsMgozLDxuaWw+Cg==",
+          "preview": "a,b\n1,2\n3,\u003cnil\u003e\n",
+          "manifest": {
+            "format": "csv",
+            "mime_type": "text/csv",
+            "bytes": 16,
+            "sha256": "1a347ec55b7a0c756bdf127e1860bf6725db94cbd82c2d1d76d2a9eacfabd5d2",
+            "renderer": "agentmaurice-artifact",
+            "renderer_version": "0.1.0"
+          }
+        },
+        "status": "ok"
+      }
+    }
+  },
+  "08-create-pdf": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "structuredContent": {
+        "artifact": {
+          "content_base64": "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA1OTUgODQyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA1IDAgUiA+PiA+PiAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA0NSA+PgpzdHJlYW0KQlQgL0YxIDExIFRmIDUwIDc5MCBUZCAxNCBUTCAoSGkgdGhlcmUpIFRqIEVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago8PCAvVHlwZSAvRm9udCAvU3VidHlwZSAvVHlwZTEgL0Jhc2VGb250IC9IZWx2ZXRpY2EgPj4KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI0MSAwMDAwMCBuIAowMDAwMDAwMzM2IDAwMDAwIG4gCnRyYWlsZXIgPDwgL1NpemUgNiAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKNDA2CiUlRU9GCg==",
+          "preview": "PDF preview generated",
+          "manifest": {
+            "format": "pdf",
+            "mime_type": "application/pdf",
+            "bytes": 589,
+            "sha256": "90de12ca4cd751831994a168d3ce422827599d526fe047e0b5c8a09de5673a0b",
+            "renderer": "agentmaurice-artifact",
+            "renderer_version": "0.1.0"
+          }
+        },
+        "status": "ok"
+      }
+    }
+  },
+  "09-create-unsupported": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "isError": true,
+      "structuredContent": {
+        "error": "artifact_create_failed",
+        "message": "unsupported format \"docx\""
+      }
+    }
+  },
+  "10-patch-markdown": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "structuredContent": {
+        "artifact": {
+          "content_base64": "PnogYiE=",
+          "preview": "\u003ez b!",
+          "manifest": {
+            "format": "markdown",
+            "mime_type": "text/markdown",
+            "bytes": 5,
+            "sha256": "b642ae8161481c8cfe08697694b52392fac5b543e149d883c35f86b70153d348",
+            "renderer": "agentmaurice-artifact",
+            "renderer_version": "0.1.0"
+          }
+        },
+        "status": "ok"
+      }
+    }
+  },
+  "11-patch-invalid-json": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "isError": true,
+      "structuredContent": {
+        "error": "artifact_patch_failed",
+        "message": "patched JSON is invalid"
+      }
+    }
+  },
+  "12-patch-bad-op": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "isError": true,
+      "structuredContent": {
+        "error": "artifact_patch_failed",
+        "message": "patch 0 uses unsupported op \"delete\""
+      }
+    }
+  },
+  "13-inspect-json": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "structuredContent": {
+        "manifest": {
+          "format": "json",
+          "mime_type": "application/json",
+          "bytes": 7,
+          "sha256": "015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862",
+          "renderer": "agentmaurice-artifact",
+          "renderer_version": "0.1.0"
+        },
+        "status": "ok"
+      }
+    }
+  },
+  "14-inspect-bad-pdf": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "isError": true,
+      "structuredContent": {
+        "error": "invalid_artifact",
+        "message": "invalid PDF header"
+      }
+    }
+  },
+  "15-inspect-bad-base64": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "isError": true,
+      "structuredContent": {
+        "error": "invalid_artifact",
+        "message": "invalid base64 content: illegal base64 data at input byte 0"
+      }
+    }
+  },
+  "16-inspect-unsupported": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [],
+      "isError": true,
+      "structuredContent": {
+        "error": "invalid_artifact",
+        "message": "unsupported format \"docx\""
+      }
+    }
+  }
+}

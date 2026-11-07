@@ -180,16 +180,16 @@ func (m *Manager) ensureSchema(ctx context.Context, alias string) error {
 		)`, alias),
 
 		// Indexes
-		fmt.Sprintf(`CREATE INDEX IF NOT EXISTS idx_sources_tenant ON %s.sources(tenant_id)`, alias),
-		fmt.Sprintf(`CREATE INDEX IF NOT EXISTS idx_documents_tenant ON %s.documents(tenant_id)`, alias),
-		fmt.Sprintf(`CREATE INDEX IF NOT EXISTS idx_documents_source ON %s.documents(source_id)`, alias),
+		fmt.Sprintf(`DROP INDEX IF EXISTS %s.idx_sources_tenant`, alias),
+		fmt.Sprintf(`DROP INDEX IF EXISTS %s.idx_documents_tenant`, alias),
+		fmt.Sprintf(`DROP INDEX IF EXISTS %s.idx_documents_source`, alias),
 		fmt.Sprintf(`CREATE INDEX IF NOT EXISTS idx_documents_hash ON %s.documents(tenant_id, source_id, content_hash)`, alias),
-		fmt.Sprintf(`CREATE INDEX IF NOT EXISTS idx_chunks_tenant ON %s.chunks(tenant_id)`, alias),
-		fmt.Sprintf(`CREATE INDEX IF NOT EXISTS idx_chunks_document ON %s.chunks(document_id)`, alias),
+		fmt.Sprintf(`DROP INDEX IF EXISTS %s.idx_chunks_tenant`, alias),
+		fmt.Sprintf(`DROP INDEX IF EXISTS %s.idx_chunks_document`, alias),
 		fmt.Sprintf(`CREATE INDEX IF NOT EXISTS idx_chunks_type ON %s.chunks(tenant_id, chunk_type)`, alias),
 		fmt.Sprintf(`CREATE INDEX IF NOT EXISTS idx_chunks_symbol ON %s.chunks(tenant_id, symbol_name)`, alias),
-		fmt.Sprintf(`CREATE INDEX IF NOT EXISTS idx_index_jobs_tenant ON %s.index_jobs(tenant_id)`, alias),
-		fmt.Sprintf(`CREATE INDEX IF NOT EXISTS idx_index_jobs_source ON %s.index_jobs(source_id)`, alias),
+		fmt.Sprintf(`DROP INDEX IF EXISTS %s.idx_index_jobs_tenant`, alias),
+		fmt.Sprintf(`DROP INDEX IF EXISTS %s.idx_index_jobs_source`, alias),
 	}
 
 	for _, migration := range migrations {

@@ -1,0 +1,22 @@
+{
+  "legal_name": "Atelier Exemple SAS",
+  "trade_name": "Atelier Exemple",
+  "legal_form": "SAS",
+  "share_capital": "10 000 EUR",
+  "siren": "000 000 000",
+  "siret": "000 000 000 00000",
+  "vat_number": "FR00000000000",
+  "rcs": "RCS Exemple-sur-Seine 000 000 000",
+  "address": {
+    "line1": "1 rue de l'Exemple",
+    "line2": "Bâtiment A",
+    "postal_code": "00000",
+    "city": "Exemple-sur-Seine",
+    "country": "France"
+  },
+  "email": "contact@atelier-exemple.invalid",
+  "phone": "+33 0 00 00 00 00",
+  "website": "https://atelier-exemple.invalid",
+  "legal_mentions": "Atelier Exemple SAS, capital de 10 000 EUR, RCS Exemple-sur-Seine 000 000 000. TVA intracommunautaire FR00000000000. Société fictive : aucune donnée réelle.",
+  "logo": { "ref": "logo.svg" }
+}

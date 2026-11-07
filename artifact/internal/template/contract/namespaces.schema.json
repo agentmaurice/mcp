@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.agentmaurice.app/template/v1/namespaces.schema.json",
+  "title": "AgentMaurice template v1 - contexte d'execution",
+  "description": "Contexte d'execution d'un gabarit : {data, company, brand, doc, i18n}. Les quatre espaces company, brand, doc et i18n sont reserves : injectes par la plateforme, jamais redefinis par un gabarit.",
+  "type": "object",
+  "required": ["data", "company", "brand", "doc", "i18n"],
+  "properties": {
+    "data": { "type": "object", "description": "Donnees metier, validees contre le input_schema du gabarit." },
+    "company": { "$ref": "#/$defs/company" },
+    "brand": { "$ref": "tokens.schema.json" },
+    "doc": { "$ref": "#/$defs/doc" },
+    "i18n": { "$ref": "#/$defs/i18n" }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "address": {
+      "type": "object",
+      "required": ["line1", "postal_code", "city", "country"],
+      "properties": {
+        "line1": { "type": "string" },
+        "line2": { "type": "string" },
+        "postal_code": { "type": "string" },
+        "city": { "type": "string" },
+        "country": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "company": {
+      "type": "object",
+      "description": "Fiche entreprise (AGENT-1575).",
+      "required": ["legal_name"],
+      "properties": {
+        "legal_name": { "type": "string", "minLength": 1 },
+        "trade_name": { "type": "string" },
+        "legal_form": { "type": "string" },
+        "share_capital": { "type": "string" },
+        "siren": { "type": "string" },
+        "siret": { "type": "string" },
+        "vat_number": { "type": "string" },
+        "rcs": { "type": "string" },
+        "address": { "$ref": "#/$defs/address" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "website": { "type": "string" },
+        "legal_mentions": { "type": "string" },
+        "logo": {
+          "type": "object",
+          "required": ["ref"],
+          "properties": { "ref": { "type": "string", "minLength": 1 } },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "doc": {
+      "type": "object",
+      "required": ["number", "title", "date", "version", "status", "locale"],
+      "properties": {
+        "number": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "version": { "type": "string" },
+        "status": { "enum": ["draft", "approved", "issued", "cancelled"] },
+        "locale": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "i18n": {
+      "type": "object",
+      "required": ["locale", "strings"],
+      "properties": {
+        "locale": { "type": "string" },
+        "strings": { "type": "object", "additionalProperties": { "type": "string" } }
+      },
+      "additionalProperties": true
+    }
+  }
+}

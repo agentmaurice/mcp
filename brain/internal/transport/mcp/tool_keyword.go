@@ -26,16 +26,17 @@ func (t *KeywordTool) Name() string { return "brain.keyword" }
 func (t *KeywordTool) Definition() mcplib.Tool {
 	return mcplib.Tool{
 		Name:        "brain.keyword",
-		Description: "BM25 full-text keyword search. Best for exact identifiers, function names, error codes, and specific terms.",
+		Description: "BM25 full-text keyword search over indexed chunks (DuckDB FTS). Identifiers in the query (AGENT-530, MEM-G3, 2026.10.19-3015, calcul_taux_marge) are matched verbatim and listed first. Use response_format=concise for URI, title, chunk id, score and a short snippet per result.",
 		InputSchema: mcplib.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]interface{}{
-				"query":       map[string]interface{}{"type": "string", "description": "Keywords to search for"},
-				"max_results": map[string]interface{}{"type": "integer", "description": "Maximum results (default 20)"},
-				"doc_types":   map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
-				"languages":   map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
-				"source_ids":  map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
-				"tenant_id":   map[string]interface{}{"type": "string"},
+				"query":           map[string]interface{}{"type": "string", "description": "Keywords to search for"},
+				"max_results":     map[string]interface{}{"type": "integer", "description": "Maximum results (default 20)"},
+				"doc_types":       map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+				"languages":       map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+				"source_ids":      map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+				"tenant_id":       map[string]interface{}{"type": "string"},
+				"response_format": responseFormatProperty,
 			},
 			Required: []string{"query"},
 		},
@@ -52,8 +53,13 @@ func (t *KeywordTool) Handler() ToolHandler {
 			Languages  []string `json:"languages"`
 			SourceIDs  []string `json:"source_ids"`
 			TenantID   string   `json:"tenant_id"`
+			Format     string   `json:"response_format"`
 		}
 		if err := parseArgs(request.Params.Arguments, &args); err != nil {
+			return errorResult(err.Error()), nil
+		}
+		format, err := parseResponseFormat(args.Format)
+		if err != nil {
 			return errorResult(err.Error()), nil
 		}
 
@@ -73,6 +79,9 @@ func (t *KeywordTool) Handler() ToolHandler {
 			return errorResult(err.Error()), nil
 		}
 
+		if format == responseFormatConcise {
+			return t.wrapper.Wrap(buildConciseSearchResponse(result)), nil
+		}
 		return t.wrapper.Wrap(result), nil
 	}
 }

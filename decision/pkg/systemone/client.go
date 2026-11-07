@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/agentmaurice/mcpchatui/mcp/decision/telemetry"
 )
 
 type Config struct {
@@ -68,7 +70,10 @@ func New(cfg Config) (*Client, error) {
 		return nil, errors.New("timeout must be positive and state limit must be between 1 and 32768 bytes")
 	}
 	cfg.URL = endpointURL(cfg.Provider, cfg.URL)
-	return &Client{config: cfg, http: &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}, nil
+	return &Client{config: cfg, http: &http.Client{
+		Transport:     telemetry.HTTPTransport(http.DefaultTransport),
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}}, nil
 }
 
 // Vendor and OpenRouter BYOK speak the TypeSafe API on /v1/systemone. The

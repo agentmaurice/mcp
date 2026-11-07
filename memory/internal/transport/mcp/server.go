@@ -10,6 +10,7 @@ import (
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/config"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/shared"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/storage"
+	"github.com/agentmaurice/mcpchatui/mcp/shared/telemetry"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"go.uber.org/zap"
@@ -82,11 +83,11 @@ func (s *Server) Build() error {
 
 	s.sseServer = server.NewSSEServer(mcpServer, sseOptions...)
 	modernHandler := server.NewStreamableHTTPServer(modernServer, server.WithStateLess(true), server.WithEndpointPath(basePath), server.WithDisableStreaming(true))
-	s.streamable = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	s.streamable = telemetry.HTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		identity := shared.IdentityFromRequest(r, s.cfg.Storage.DefaultTenantID)
 		ctx := shared.ContextWithIdentity(r.Context(), identity)
 		modernHandler.ServeHTTP(w, r.WithContext(ctx))
-	})
+	}))
 	stdioServer := server.NewStdioServer(mcpServer)
 	stdioServer.SetContextFunc(func(ctx context.Context) context.Context {
 		id := shared.IdentityFromEnv(s.cfg.Storage.DefaultTenantID)
@@ -184,8 +185,10 @@ func (s *Server) registerTools(mcpServer *server.MCPServer) {
 	s.logger.Info("registered MCP tools", zap.Int("count", len(tools)))
 }
 
+// wrapToolHandler logs each call and runs it in an mcp.server.tool span that
+// joins the caller's trace (params._meta or HTTP headers).
 func (s *Server) wrapToolHandler(toolName string, handler ToolHandler) ToolHandler {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return telemetry.WrapToolHandler(toolName, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		start := time.Now()
 		result, err := handler(ctx, request)
 		elapsed := time.Since(start)
@@ -199,7 +202,7 @@ func (s *Server) wrapToolHandler(toolName string, handler ToolHandler) ToolHandl
 			s.logger.Debug("tool call completed", zap.String("tool", toolName), zap.Duration("elapsed", elapsed))
 		}
 		return result, nil
-	}
+	})
 }
 
 // Tool defines the interface for MCP tools.

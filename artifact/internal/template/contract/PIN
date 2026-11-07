@@ -1,0 +1,5 @@
+Vendored from pilote-maurice contracts/template/v1 (AGENT-1586), not yet merged on main when copied.
+source_worktree: _worktrees/pilote-maurice-agent-1586
+source_commit: 2f94c37667d43a7a2a5e9c7ee03c28f156f8741c (schemas and fragments unchanged since 0224b37; two golden/invalid cases added)
+files: manifest.schema.json namespaces.schema.json tokens.schema.json fragments/*.typ
+Update by copying again and bumping this PIN; do not edit the copies by hand.

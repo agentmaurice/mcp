@@ -1,0 +1,21 @@
+{
+  "colors": {
+    "primary": "#1F3A5F",
+    "secondary": "#4F6D8F",
+    "accent": "#E07A1F",
+    "text": "#1B1B1F",
+    "muted": "#6B7280",
+    "background": "#F5F7FA"
+  },
+  "fonts": {
+    "heading": { "family": "Libertinus Serif" },
+    "body": { "family": "Libertinus Serif" },
+    "mono": { "family": "DejaVu Sans Mono" }
+  },
+  "logo": { "ref": "logo.svg", "alt": "Logo Atelier Exemple" },
+  "page": {
+    "size": "A4",
+    "margins_mm": { "top": 22, "right": 20, "bottom": 22, "left": 20 }
+  },
+  "spacing": { "s": 2, "m": 4, "l": 8 }
+}

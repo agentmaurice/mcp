@@ -56,6 +56,17 @@ type Runtime struct {
 	currentAPIKey string
 	startedAt     time.Time
 
+	// connectionGen counts the broker connections (onConnect calls): the
+	// subscription loop of an older connection stops when it moves on.
+	// subscribed is true once the broker accepted the command subscription of
+	// the current connection. Both are guarded by mu.
+	connectionGen uint64
+	subscribed    bool
+	// subscribeRetryInitial and subscribeRetryMax space the attempts to
+	// subscribe again after the broker refused; zero means the defaults.
+	subscribeRetryInitial time.Duration
+	subscribeRetryMax     time.Duration
+
 	mu sync.RWMutex
 }
 
@@ -180,17 +191,74 @@ func (r *Runtime) Stop() error {
 func (r *Runtime) onConnect(client mqttlib.Client) {
 	r.mu.Lock()
 	r.client = client
+	r.connectionGen++
+	generation := r.connectionGen
+	r.subscribed = false
 	r.mu.Unlock()
 
 	r.logger.Info("MQTT sidecar connected")
-	r.subscribe(r.cmdTopic(), r.handleCommand)
-
 	if err := r.publishHello(); err != nil {
 		r.logger.Error("failed to publish hello", zap.Error(err))
 	}
-	if err := r.publishStatus("healthy"); err != nil {
-		r.logger.Error("failed to publish healthy status", zap.Error(err))
+	go r.maintainSubscription(generation)
+}
+
+// maintainSubscription subscribes to the command topic and keeps trying while
+// the broker refuses. A broker whose authorization backend is not ready, or
+// answers late, refuses the subscription with a failure code in the SUBACK
+// while the connection itself stays up: without a retry the sidecar looked
+// connected, published its heartbeat, and never received a command until the
+// next reconnection (AGENT-1554). The loop ends on success, when the runtime
+// stops, or when a newer connection took over.
+func (r *Runtime) maintainSubscription(generation uint64) {
+	delay := r.subscribeRetryInitial
+	if delay <= 0 {
+		delay = time.Second
 	}
+	maxDelay := r.subscribeRetryMax
+	if maxDelay <= 0 {
+		maxDelay = 30 * time.Second
+	}
+	topic := r.cmdTopic()
+	for attempt := 1; ; attempt++ {
+		r.mu.RLock()
+		current := r.connectionGen == generation && r.client != nil
+		r.mu.RUnlock()
+		if !current {
+			return
+		}
+		err := r.subscribe(topic, r.handleCommand)
+		if err == nil {
+			r.mu.Lock()
+			if r.connectionGen != generation {
+				r.mu.Unlock()
+				return
+			}
+			r.subscribed = true
+			r.mu.Unlock()
+			if attempt > 1 {
+				r.logger.Info("MQTT command subscription recovered", zap.String("topic", topic), zap.Int("attempts", attempt))
+			}
+			if err := r.publishStatus("healthy"); err != nil {
+				r.logger.Error("failed to publish healthy status", zap.Error(err))
+			}
+			return
+		}
+		r.logger.Warn("MQTT command subscription not established, retrying",
+			zap.String("topic", topic), zap.Int("attempt", attempt), zap.Duration("retry_in", delay), zap.Error(err))
+		time.Sleep(delay)
+		if delay *= 2; delay > maxDelay {
+			delay = maxDelay
+		}
+	}
+}
+
+// commandSubscribed reports whether the broker accepted the command
+// subscription of the current connection.
+func (r *Runtime) commandSubscribed() bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.subscribed
 }
 
 func (r *Runtime) watchCredentialRotation(ctx context.Context) {
@@ -255,10 +323,17 @@ func (r *Runtime) heartbeatLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			uptime := int64(time.Since(r.startedAt).Seconds())
-			_ = r.publishEvent("", "heartbeat", "healthy", map[string]interface{}{
-				"status":  "healthy",
-				"version": runtimeVersion,
-				"uptime":  uptime,
+			// Connected without a command subscription is degraded: nothing
+			// can reach this sidecar.
+			status, subscribed := "healthy", r.commandSubscribed()
+			if !subscribed {
+				status = "degraded"
+			}
+			_ = r.publishEvent("", "heartbeat", status, map[string]interface{}{
+				"status":     status,
+				"version":    runtimeVersion,
+				"uptime":     uptime,
+				"subscribed": subscribed,
 			}, nil)
 		}
 	}
@@ -409,6 +484,11 @@ func (r *Runtime) newConnectedClient(apiKey string) (mqttlib.Client, error) {
 	opts.SetPassword(apiKey)
 	opts.SetTLSConfig(tlsConfig)
 	opts.SetAutoReconnect(true)
+	// RPC handlers wait for the backend and for QoS 1 replies. Running them
+	// on Paho's ordered router can deadlock connection teardown: reconnect
+	// waits for the router while the handler waits for an acknowledgement.
+	opts.SetOrderMatters(false)
+	opts.SetWriteTimeout(r.mqttTimeout())
 	opts.SetConnectRetry(true)
 	opts.SetConnectRetryInterval(2 * time.Second)
 	opts.SetKeepAlive(60 * time.Second)
@@ -434,21 +514,37 @@ func (r *Runtime) newConnectedClient(apiKey string) (mqttlib.Client, error) {
 	return client, nil
 }
 
-func (r *Runtime) subscribe(topic string, handler mqttlib.MessageHandler) {
+// errSubscriptionRefused is returned when the broker answers the SUBSCRIBE with
+// the failure code of a refused subscription (an authorization denial).
+var errSubscriptionRefused = errors.New("subscription refused by the broker")
+
+// subscriptionFailure is the SUBACK return code of a refused topic filter.
+const subscriptionFailure = 0x80
+
+func (r *Runtime) subscribe(topic string, handler mqttlib.MessageHandler) error {
 	r.mu.RLock()
 	client := r.client
 	r.mu.RUnlock()
 	if client == nil {
-		return
+		return errors.New("mqtt client is not connected")
 	}
 
 	token := client.Subscribe(topic, 1, handler)
-	token.Wait()
+	if !token.WaitTimeout(r.mqttTimeout()) {
+		return fmt.Errorf("timeout while subscribing to MQTT topic %s", topic)
+	}
 	if err := token.Error(); err != nil {
-		r.logger.Error("failed to subscribe", zap.String("topic", topic), zap.Error(err))
-		return
+		return fmt.Errorf("failed to subscribe to MQTT topic %s: %w", topic, err)
+	}
+	// Paho reports a refused subscription only through the granted QoS of the
+	// SUBACK: the token carries no error for it.
+	if sub, ok := token.(*mqttlib.SubscribeToken); ok {
+		if granted, found := sub.Result()[topic]; found && granted == subscriptionFailure {
+			return fmt.Errorf("%w: %s", errSubscriptionRefused, topic)
+		}
 	}
 	r.logger.Info("subscribed to MQTT topic", zap.String("topic", topic))
+	return nil
 }
 
 func (r *Runtime) handleCommand(_ mqttlib.Client, msg mqttlib.Message) {
@@ -631,11 +727,20 @@ func (r *Runtime) publish(topic string, payload []byte) error {
 	}
 
 	token := client.Publish(topic, 1, false, compressed)
-	token.Wait()
+	if !token.WaitTimeout(r.mqttTimeout()) {
+		return fmt.Errorf("timeout while publishing to MQTT topic %s", topic)
+	}
 	if err := token.Error(); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (r *Runtime) mqttTimeout() time.Duration {
+	if r.cfg.MQTTTimeout > 0 {
+		return r.cfg.MQTTTimeout
+	}
+	return 2 * time.Minute
 }
 
 func (r *Runtime) publishJSON(topic string, payload interface{}) error {

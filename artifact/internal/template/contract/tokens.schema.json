@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.agentmaurice.app/template/v1/tokens.schema.json",
+  "title": "AgentMaurice template v1 - tokens de charte",
+  "description": "Charte graphique en jetons, consommee par tous les genres de gabarits. Exposee sous l'espace reserve `brand`.",
+  "type": "object",
+  "required": ["colors", "fonts", "logo", "page"],
+  "properties": {
+    "colors": {
+      "type": "object",
+      "required": ["primary", "secondary", "accent", "text", "muted", "background"],
+      "properties": {
+        "primary": { "$ref": "#/$defs/hex_color" },
+        "secondary": { "$ref": "#/$defs/hex_color" },
+        "accent": { "$ref": "#/$defs/hex_color" },
+        "text": { "$ref": "#/$defs/hex_color" },
+        "muted": { "$ref": "#/$defs/hex_color" },
+        "background": { "$ref": "#/$defs/hex_color" }
+      },
+      "additionalProperties": true
+    },
+    "fonts": {
+      "type": "object",
+      "required": ["heading", "body", "mono"],
+      "properties": {
+        "heading": { "$ref": "#/$defs/font" },
+        "body": { "$ref": "#/$defs/font" },
+        "mono": { "$ref": "#/$defs/font" }
+      },
+      "additionalProperties": true
+    },
+    "logo": {
+      "type": "object",
+      "required": ["ref", "alt"],
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Chemin relatif ou reference `storage://`. La plateforme la resout avant le rendu."
+        },
+        "alt": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "page": {
+      "type": "object",
+      "required": ["size", "margins_mm"],
+      "properties": {
+        "size": { "enum": ["A4", "Letter"] },
+        "margins_mm": {
+          "type": "object",
+          "required": ["top", "right", "bottom", "left"],
+          "properties": {
+            "top": { "type": "number", "minimum": 0 },
+            "right": { "type": "number", "minimum": 0 },
+            "bottom": { "type": "number", "minimum": 0 },
+            "left": { "type": "number", "minimum": 0 }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "spacing": {
+      "type": "object",
+      "description": "Optionnel : echelle d'espacement en millimetres.",
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "hex_color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "font": {
+      "type": "object",
+      "required": ["family"],
+      "properties": { "family": { "type": "string", "minLength": 1 } },
+      "additionalProperties": true
+    }
+  }
+}

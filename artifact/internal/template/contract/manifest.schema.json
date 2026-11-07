@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.agentmaurice.app/template/v1/manifest.schema.json",
+  "title": "AgentMaurice template v1 - manifeste de gabarit",
+  "description": "Manifeste d'un gabarit unique, quel que soit le genre (document, web, message). Tous les chemins sont relatifs au dossier du gabarit, sauf `fragments` (bibliotheque partagee).",
+  "type": "object",
+  "required": ["schema", "key", "version", "kind", "profile", "source", "outputs", "default_locale", "input_schema", "examples"],
+  "properties": {
+    "schema": { "const": "agentmaurice.template/v1" },
+    "key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$" },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "kind": { "enum": ["document", "slide", "sheet", "article", "page", "post", "message", "label", "image"] },
+    "profile": { "enum": ["document", "web", "message"] },
+    "source": {
+      "type": "object",
+      "required": ["engine", "entry"],
+      "properties": {
+        "engine": { "enum": ["typst", "html", "markdown", "text", "mjml", "json"] },
+        "entry": { "$ref": "#/$defs/relative_path" }
+      },
+      "additionalProperties": true
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["pdf", "png", "html", "md", "txt", "docx", "xlsx", "pptx", "eml"] }
+    },
+    "locales": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/bcp47" }
+    },
+    "default_locale": { "$ref": "#/$defs/bcp47" },
+    "input_schema": { "$ref": "#/$defs/relative_path" },
+    "examples": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "data"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "data": { "$ref": "#/$defs/relative_path" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "fragments": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/relative_path" },
+      "uniqueItems": true,
+      "description": "Chemins relatifs a la bibliotheque partagee de fragments."
+    },
+    "reference_renders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["example", "output", "sha256"],
+        "properties": {
+          "example": { "type": "string" },
+          "output": { "enum": ["pdf", "png", "html", "md", "txt", "docx", "xlsx", "pptx", "eml"] },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "max_source_bytes": { "type": "integer", "minimum": 1 },
+        "max_pages": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "imported": {
+      "type": "object",
+      "description": "Gabarit Office importe : corps opaque, enveloppe par ce manifeste.",
+      "required": ["format", "body"],
+      "properties": {
+        "format": { "enum": ["docx", "xlsx", "pptx"] },
+        "body": { "$ref": "#/$defs/relative_path" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "relative_path": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_][A-Za-z0-9_./-]*$",
+      "not": { "pattern": "\\.\\." }
+    },
+    "bcp47": { "type": "string", "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$" }
+  }
+}

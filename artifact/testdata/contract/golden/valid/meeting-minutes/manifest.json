@@ -1,0 +1,41 @@
+{
+  "schema": "agentmaurice.template/v1",
+  "key": "meeting-minutes",
+  "version": "1.0.0",
+  "title": "Compte rendu de réunion",
+  "description": "Compte rendu avec participants, ordre du jour, décisions et actions (responsable, échéance).",
+  "kind": "document",
+  "profile": "document",
+  "source": {
+    "engine": "typst",
+    "entry": "main.typ"
+  },
+  "outputs": [
+    "pdf"
+  ],
+  "locales": [
+    "fr"
+  ],
+  "default_locale": "fr",
+  "input_schema": "input.schema.json",
+  "examples": [
+    {
+      "name": "default",
+      "data": "examples/default.json"
+    },
+    {
+      "name": "minimal",
+      "data": "examples/minimal.json"
+    }
+  ],
+  "fragments": [
+    "fragments/header.typ",
+    "fragments/footer.typ",
+    "fragments/legal-mentions.typ",
+    "fragments/lines-table.typ"
+  ],
+  "limits": {
+    "max_source_bytes": 20000,
+    "max_pages": 3
+  }
+}

@@ -1,3 +1,6 @@
+# SIDECAR_IMAGE: mcp-sidecar base image (declared before the first FROM to be usable in one).
+ARG SIDECAR_IMAGE
+
 FROM golang:1.26.0-bookworm@sha256:2a0ba12e116687098780d3ce700f9ce3cb340783779646aafbabed748fa6677c AS builder
 
 WORKDIR /src/mcp
@@ -11,7 +14,6 @@ COPY ssh ./ssh
 WORKDIR /src/mcp/ssh
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/ssh ./cmd/ssh
 
-ARG SIDECAR_IMAGE
 FROM ${SIDECAR_IMAGE} AS sidecar
 
 FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818

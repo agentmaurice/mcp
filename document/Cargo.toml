@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
 publish = false
-license = "LicenseRef-Proprietary"
+license = "Apache-2.0"
 description = "AgentMaurice MCP server for local document conversion"
 
 [dependencies]

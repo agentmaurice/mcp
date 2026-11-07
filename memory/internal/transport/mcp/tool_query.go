@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/config"
+	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/logging"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/storage"
 	"github.com/mark3labs/mcp-go/mcp"
 	"go.uber.org/zap"
@@ -30,7 +31,7 @@ func (t *QueryTool) Name() string {
 func (t *QueryTool) Definition() mcp.Tool {
 	return mcp.Tool{
 		Name:        "memory.query",
-		Description: "Execute a read-only SQL SELECT query with guardrails",
+		Description: "Execute a read-only SQL SELECT query with guardrails. The result sets truncated only when the row cap dropped rows; for a tenant with no entity, document or fact it sets tenant_empty and returns a warning.",
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]interface{}{
@@ -69,7 +70,8 @@ func (t *QueryTool) Definition() mcp.Tool {
 
 func (t *QueryTool) Handler() ToolHandler {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		t.logger.Info("tool called", zap.Any("arguments", request.Params.Arguments))
+		t.logger.Info("tool called", zap.String("tool", t.Name()), logging.SizeOf("arguments", request.Params.Arguments))
+		logging.DebugValue(t.logger, "tool arguments", "arguments", request.Params.Arguments, zap.String("tool", t.Name()))
 
 		var args struct {
 			TenantID  string         `json:"tenant_id"`
@@ -79,35 +81,42 @@ func (t *QueryTool) Handler() ToolHandler {
 			TimeoutMs int            `json:"timeoutMs"`
 		}
 		if err := parseArgs(request.Params.Arguments, &args); err != nil {
-			t.logger.Warn("failed to parse arguments", zap.Error(err), zap.Any("raw_arguments", request.Params.Arguments))
+			t.logger.Warn("failed to parse arguments", zap.String("tool", t.Name()), logging.ErrorClass(err), logging.SizeOf("raw_arguments", request.Params.Arguments))
+			logging.DebugValue(t.logger, "unparsed arguments", "raw_arguments", request.Params.Arguments, zap.String("tool", t.Name()))
 			return errorResult("failed to parse arguments"), nil
 		}
 
+		logging.Debug(t.logger, "parsed sql", "sql", args.SQL, zap.String("tenant_id", args.TenantID))
+		logging.DebugValue(t.logger, "parsed params", "params", args.Params)
 		t.logger.Debug("parsed arguments",
 			zap.String("tenant_id", args.TenantID),
-			zap.String("sql", args.SQL),
-			zap.Any("params", args.Params),
+			logging.Size("sql", args.SQL),
+			logging.SizeOf("params", args.Params),
 			zap.Int("maxRows", args.MaxRows),
 			zap.Int("timeoutMs", args.TimeoutMs),
 		)
 
 		tenantID, err := resolveTenantID(ctx, t.cfg, args.TenantID, request.Params.Arguments)
 		if err != nil {
-			t.logger.Warn("failed to resolve tenant ID", zap.Error(err))
+			t.logger.Warn("failed to resolve tenant ID", logging.ErrorClass(err))
 			return errorResult(err.Error()), nil
 		}
 
 		result, err := executeQuery(ctx, t.storage, t.cfg, t.logger, args.SQL, args.Params, args.MaxRows, args.TimeoutMs, tenantID)
 		if err != nil {
 			t.logger.Error("query execution failed",
-				zap.Error(err),
-				zap.String("sql", args.SQL),
+				logging.ErrorClass(err),
+				logging.Size("sql", args.SQL),
 				zap.String("tenant_id", tenantID),
 			)
+			logging.DebugError(t.logger, "query execution error text", err)
 			return errorResult(err.Error()), nil
 		}
 
 		t.logger.Info("query completed successfully",
+			zap.String("tool", t.Name()),
+			zap.String("tenant_id", tenantID),
+			logging.Size("sql", args.SQL),
 			zap.Int("row_count", len(result.Rows)),
 			zap.Int64("elapsed_ms", result.QueryStats.ElapsedMs),
 		)

@@ -7,30 +7,33 @@ import (
 	"strings"
 
 	artifactengine "github.com/agentmaurice/mcpchatui/mcp/artifact/internal/artifact"
+	"github.com/agentmaurice/mcpchatui/mcp/artifact/internal/version"
 	"github.com/agentmaurice/mcpchatui/mcp/shared/modernmcp"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-const serviceVersion = "0.1.0"
+var serviceVersion = version.Version
+
 const maxArtifactBytes = 2 * 1024 * 1024
 
-func New() *modernmcp.Server {
+func New() *modernmcp.Server { return NewWithDeps(DepsFromEnv()) }
+
+// NewWithDeps builds the server with explicit dependencies (tests).
+func NewWithDeps(deps Deps) *modernmcp.Server {
+	h := &handlers{deps: deps}
 	s := modernmcp.New("agentmaurice-artifact", serviceVersion, "Use Artifact to create, patch, render and inspect bounded deliverables with a SHA-256 provenance manifest.")
-	s.AddTool(readTool("artifact_health_v1", "Check the Artifact MCP.", schema(nil, nil)), health)
-	s.AddTool(readTool("artifact_capabilities_v1", "Describe formats, renderer and limits.", schema(nil, nil)), capabilities)
-	s.AddTool(writeTool("artifact_create_v1", "Create a deterministic bounded artifact.", schema(map[string]interface{}{"format": map[string]interface{}{"type": "string", "enum": []string{"markdown", "html", "csv", "json", "pdf"}}, "content": map[string]interface{}{}}, []string{"format", "content"})), create)
-	s.AddTool(writeTool("artifact_patch_v1", "Apply ordered replace, append or prepend operations.", schema(map[string]interface{}{"format": map[string]interface{}{"type": "string", "enum": []string{"markdown", "html", "json"}}, "content": map[string]interface{}{"type": "string", "maxLength": maxArtifactBytes}, "patches": map[string]interface{}{"type": "array", "maxItems": 100, "items": map[string]interface{}{"type": "object"}}}, []string{"format", "content", "patches"})), patchArtifact)
-	s.AddTool(writeTool("artifact_render_v1", "Render Markdown or HTML to a deterministic PDF preview.", schema(map[string]interface{}{"format": map[string]interface{}{"type": "string", "enum": []string{"markdown", "html"}}, "content": map[string]interface{}{"type": "string", "maxLength": maxArtifactBytes}, "output_format": map[string]interface{}{"type": "string", "enum": []string{"pdf"}}}, []string{"format", "content", "output_format"})), render)
-	s.AddTool(readTool("artifact_inspect_v1", "Validate an artifact and return its provenance manifest.", schema(map[string]interface{}{"format": map[string]interface{}{"type": "string"}, "content_base64": map[string]interface{}{"type": "string"}}, []string{"format", "content_base64"})), inspect)
+	s.AddTool(readTool("artifact_health_v1", "Check the Artifact MCP.", schema(nil, nil)), h.health)
+	s.AddTool(readTool("artifact_capabilities_v1", "Describe formats, rendering engines, template contract and limits.", schema(nil, nil)), h.capabilities)
+	s.AddTool(writeTool("artifact_create_v1", "Create a deterministic bounded artifact.", schema(map[string]interface{}{"format": map[string]interface{}{"type": "string", "enum": []string{"markdown", "html", "csv", "json", "pdf"}}, "content": map[string]interface{}{}}, []string{"format", "content"})), h.create)
+	s.AddTool(writeTool("artifact_patch_v1", "Apply ordered replace, append or prepend operations.", schema(map[string]interface{}{"format": map[string]interface{}{"type": "string", "enum": []string{"markdown", "html", "json"}}, "content": map[string]interface{}{"type": "string", "maxLength": maxArtifactBytes}, "patches": map[string]interface{}{"type": "array", "maxItems": 100, "items": map[string]interface{}{"type": "object"}}}, []string{"format", "content", "patches"})), h.patchArtifact)
+	s.AddTool(writeTool("artifact_render_v1", renderDescription, renderSchema()), h.render)
+	s.AddTool(readTool("artifact_inspect_v1", "Validate an artifact and return its provenance manifest.", schema(map[string]interface{}{"format": map[string]interface{}{"type": "string"}, "content_base64": map[string]interface{}{"type": "string"}}, []string{"format", "content_base64"})), h.inspect)
 	return s
 }
-func health(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (h *handlers) health(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return result(map[string]interface{}{"status": "ok", "version": serviceVersion}), nil
 }
-func capabilities(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return result(map[string]interface{}{"version": "v1", "create_formats": []string{"markdown", "html", "csv", "json", "pdf"}, "patch_formats": []string{"markdown", "html", "json"}, "preview_formats": []string{"pdf"}, "max_artifact_bytes": maxArtifactBytes, "storage_integration": false}), nil
-}
-func create(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (h *handlers) create(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	arguments := request.GetArguments()
 	format, _ := arguments["format"].(string)
 	created, err := artifactengine.Create(format, arguments["content"])
@@ -42,7 +45,7 @@ func create(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult
 	}
 	return result(map[string]interface{}{"status": "ok", "artifact": created}), nil
 }
-func patchArtifact(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (h *handlers) patchArtifact(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	var input struct {
 		Format  string                 `json:"format"`
 		Content string                 `json:"content"`
@@ -60,7 +63,17 @@ func patchArtifact(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToo
 	}
 	return result(map[string]interface{}{"status": "ok", "artifact": patched}), nil
 }
-func render(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+
+// render dispatches: a call with a `template` is the v0.2 template render; a
+// call without it keeps the v0.1 contract (format, content, output_format).
+func (h *handlers) render(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if _, ok := request.GetArguments()["template"]; ok {
+		return h.renderTemplate(ctx, request)
+	}
+	return renderLegacy(request)
+}
+
+func renderLegacy(request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	arguments := request.GetArguments()
 	format, _ := arguments["format"].(string)
 	content, _ := arguments["content"].(string)
@@ -74,7 +87,7 @@ func render(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult
 	}
 	return result(map[string]interface{}{"status": "ok", "artifact": rendered}), nil
 }
-func inspect(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (h *handlers) inspect(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	arguments := request.GetArguments()
 	format, _ := arguments["format"].(string)
 	encoded, _ := arguments["content_base64"].(string)

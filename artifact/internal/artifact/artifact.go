@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/agentmaurice/mcpchatui/mcp/artifact/internal/version"
 )
 
 type Manifest struct {
@@ -136,8 +138,21 @@ func packageResult(format string, payload []byte) Result {
 }
 func manifest(format string, payload []byte) Manifest {
 	hash := sha256.Sum256(payload)
-	return Manifest{Format: format, MimeType: mimeType(format), Bytes: len(payload), SHA256: fmt.Sprintf("%x", hash[:]), Renderer: "agentmaurice-artifact", RendererVersion: "0.1.0"}
+	return Manifest{Format: format, MimeType: mimeType(format), Bytes: len(payload), SHA256: fmt.Sprintf("%x", hash[:]), Renderer: "agentmaurice-artifact", RendererVersion: legacyRendererVersion}
 }
+
+// ManifestFor returns the provenance manifest of a payload in the given format.
+func ManifestFor(format string, payload []byte) Manifest {
+	m := manifest(format, payload)
+	m.RendererVersion = version.Version
+	return m
+}
+
+// legacyRendererVersion is the renderer_version reported by the v0.1 tools
+// (create, patch, render without template, inspect): a v0.1 call keeps its
+// exact response. Template renders report version.Version.
+const legacyRendererVersion = "0.1.0"
+
 func mimeType(format string) string {
 	switch format {
 	case "markdown":
@@ -150,6 +165,10 @@ func mimeType(format string) string {
 		return "application/json"
 	case "pdf":
 		return "application/pdf"
+	case "png":
+		return "image/png"
+	case "txt":
+		return "text/plain"
 	default:
 		return "application/octet-stream"
 	}

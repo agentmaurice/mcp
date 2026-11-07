@@ -6,10 +6,19 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
+
+	"go.uber.org/zap"
 )
 
 // EnsureSchema ensures schema exists and migrations are applied.
 func EnsureSchema(ctx context.Context, db *sql.DB) error {
+	return EnsureSchemaLogged(ctx, db, nil)
+}
+
+// EnsureSchemaLogged applies the schema and drops the single-column secondary indexes,
+// logging each drop when a logger is given.
+func EnsureSchemaLogged(ctx context.Context, db *sql.DB, logger *zap.Logger) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -58,6 +67,7 @@ func EnsureSchema(ctx context.Context, db *sql.DB) error {
 		}
 	}
 
+	dropSingleColumnIndexes(ctx, db, logger)
 	return nil
 }
 
@@ -72,8 +82,6 @@ func applyMigration1(ctx context.Context, db *sql.DB) error {
 			raw JSON,
 			created_at TIMESTAMP NOT NULL DEFAULT now()
 		);`,
-		`CREATE INDEX IF NOT EXISTS idx_sources_system ON sources(system);`,
-		`CREATE INDEX IF NOT EXISTS idx_sources_trace ON sources(trace_id);`,
 
 		`CREATE TABLE IF NOT EXISTS entities (
 			entity_id VARCHAR PRIMARY KEY,
@@ -87,8 +95,6 @@ func applyMigration1(ctx context.Context, db *sql.DB) error {
 			last_source_id VARCHAR,
 			CONSTRAINT uq_entity_external UNIQUE(entity_type, external_id)
 		);`,
-		`CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(entity_type);`,
-		`CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name);`,
 
 		`CREATE TABLE IF NOT EXISTS facts (
 			fact_id VARCHAR PRIMARY KEY,
@@ -102,10 +108,6 @@ func applyMigration1(ctx context.Context, db *sql.DB) error {
 			source_id VARCHAR,
 			is_deleted BOOLEAN NOT NULL DEFAULT false
 		);`,
-		`CREATE INDEX IF NOT EXISTS idx_facts_type ON facts(fact_type);`,
-		`CREATE INDEX IF NOT EXISTS idx_facts_effective ON facts(effective_at);`,
-		`CREATE INDEX IF NOT EXISTS idx_facts_subject ON facts(subject_entity_id);`,
-		`CREATE INDEX IF NOT EXISTS idx_facts_correlates ON facts(correlates_to);`,
 
 		`CREATE TABLE IF NOT EXISTS documents (
 			document_id VARCHAR PRIMARY KEY,
@@ -117,7 +119,6 @@ func applyMigration1(ctx context.Context, db *sql.DB) error {
 			created_at TIMESTAMP NOT NULL DEFAULT now(),
 			source_id VARCHAR
 		);`,
-		`CREATE INDEX IF NOT EXISTS idx_documents_mime ON documents(mime_type);`,
 
 		`CREATE TABLE IF NOT EXISTS document_links (
 			link_id VARCHAR PRIMARY KEY,
@@ -127,9 +128,6 @@ func applyMigration1(ctx context.Context, db *sql.DB) error {
 			relationship VARCHAR,
 			created_at TIMESTAMP NOT NULL DEFAULT now()
 		);`,
-		`CREATE INDEX IF NOT EXISTS idx_doclinks_doc ON document_links(document_id);`,
-		`CREATE INDEX IF NOT EXISTS idx_doclinks_ent ON document_links(entity_id);`,
-		`CREATE INDEX IF NOT EXISTS idx_doclinks_fact ON document_links(fact_id);`,
 
 		`CREATE TABLE IF NOT EXISTS pii_policy (
 			policy_id VARCHAR PRIMARY KEY,
@@ -216,8 +214,6 @@ func applyMigration2(ctx context.Context, db *sql.DB) error {
 			actor_type VARCHAR NOT NULL,
 			created_at TIMESTAMP NOT NULL DEFAULT now()
 		);`,
-		`CREATE INDEX IF NOT EXISTS idx_writers_app ON writers(app_id);`,
-		`CREATE INDEX IF NOT EXISTS idx_writers_actor ON writers(actor_id);`,
 
 		`CREATE TABLE IF NOT EXISTS links (
 			link_id VARCHAR PRIMARY KEY,
@@ -238,9 +234,6 @@ func applyMigration2(ctx context.Context, db *sql.DB) error {
 			writer_id VARCHAR,
 			is_deleted BOOLEAN NOT NULL DEFAULT false
 		);`,
-		`CREATE INDEX IF NOT EXISTS idx_links_type ON links(link_type);`,
-		`CREATE INDEX IF NOT EXISTS idx_links_from ON links(from_kind);`,
-		`CREATE INDEX IF NOT EXISTS idx_links_to ON links(to_kind);`,
 	}
 
 	for _, stmt := range statements {
@@ -259,9 +252,6 @@ func applyMigration2(ctx context.Context, db *sql.DB) error {
 	if err := ensureColumn(ctx, db, "entities", "is_deleted", "BOOLEAN DEFAULT false"); err != nil {
 		return err
 	}
-	if err := ensureIndex(ctx, db, "idx_entities_updated", "entities(updated_at)"); err != nil {
-		return err
-	}
 
 	// facts columns
 	if err := ensureColumn(ctx, db, "facts", "dedupe_key", "VARCHAR"); err != nil {
@@ -273,9 +263,6 @@ func applyMigration2(ctx context.Context, db *sql.DB) error {
 	if err := ensureColumn(ctx, db, "facts", "is_deleted", "BOOLEAN DEFAULT false"); err != nil {
 		return err
 	}
-	if err := ensureIndex(ctx, db, "idx_facts_dedupe", "facts(dedupe_key)"); err != nil {
-		return err
-	}
 
 	// documents columns
 	if err := ensureColumn(ctx, db, "documents", "metadata", "JSON"); err != nil {
@@ -285,9 +272,6 @@ func applyMigration2(ctx context.Context, db *sql.DB) error {
 		return err
 	}
 	if err := ensureColumn(ctx, db, "documents", "is_deleted", "BOOLEAN DEFAULT false"); err != nil {
-		return err
-	}
-	if err := ensureIndex(ctx, db, "idx_documents_created", "documents(created_at)"); err != nil {
 		return err
 	}
 
@@ -385,8 +369,6 @@ func applyMigration3(ctx context.Context, db *sql.DB) error {
 			raw_persisted BOOLEAN NOT NULL DEFAULT false,
 			created_at TIMESTAMP NOT NULL DEFAULT now()
 		);`,
-		`CREATE INDEX IF NOT EXISTS idx_ingest_receipts_tenant ON ingest_receipts(tenant_id);`,
-		`CREATE INDEX IF NOT EXISTS idx_ingest_receipts_kind ON ingest_receipts(kind);`,
 		`CREATE OR REPLACE VIEW v_observations AS
 			SELECT
 				f.fact_id,
@@ -433,9 +415,73 @@ func ensureColumn(ctx context.Context, db *sql.DB, table string, column string, 
 	return nil
 }
 
-func ensureIndex(ctx context.Context, db *sql.DB, indexName string, expr string) error {
-	if _, err := db.ExecContext(ctx, fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s", indexName, expr)); err != nil {
-		return fmt.Errorf("failed to ensure index %s: %w", indexName, err)
+// singleColumnIndexesSQL lists the secondary indexes of the kernel schema (main) in the
+// current database: not primary keys, not unique constraints, not the indexes of other
+// schemas, which belong to whoever created them.
+const singleColumnIndexesSQL = `SELECT index_name, table_name, expressions FROM duckdb_indexes() WHERE NOT is_primary AND NOT is_unique AND schema_name = 'main' AND database_name = current_database()`
+
+// expressionCount counts the elements of a duckdb_indexes().expressions value such as
+// [entity_type, '"name"'] (commas inside single quotes do not count).
+func expressionCount(expressions string) int {
+	s := strings.TrimSpace(expressions)
+	s = strings.TrimPrefix(s, "[")
+	s = strings.TrimSuffix(s, "]")
+	if strings.TrimSpace(s) == "" {
+		return 0
 	}
-	return nil
+	count, quoted := 1, false
+	for _, r := range s {
+		switch {
+		case r == '\'':
+			quoted = !quoted
+		case r == ',' && !quoted:
+			count++
+		}
+	}
+	return count
+}
+
+// dropSingleColumnIndexes drops the single-column secondary indexes of the kernel schema,
+// whatever their names, and logs each drop. Such an index is affected by the DuckDB 1.4.1
+// defect (see the README). It never fails the open: a failure is logged and the open
+// goes on, so one index that cannot be dropped does not block a tenant.
+func dropSingleColumnIndexes(ctx context.Context, db *sql.DB, logger *zap.Logger) {
+	warn := func(msg string, fields ...zap.Field) {
+		if logger != nil {
+			logger.Warn(msg, fields...)
+		}
+	}
+	rows, err := db.QueryContext(ctx, singleColumnIndexesSQL)
+	if err != nil {
+		warn("cannot list indexes to check the DuckDB 1.4.1 defect", zap.Error(err))
+		return
+	}
+	type candidate struct{ name, table string }
+	var drop []candidate
+	for rows.Next() {
+		var name, table, expressions string
+		if err := rows.Scan(&name, &table, &expressions); err != nil {
+			warn("cannot read the index list", zap.Error(err))
+			continue
+		}
+		if expressionCount(expressions) <= 1 {
+			drop = append(drop, candidate{name: name, table: table})
+		}
+	}
+	if err := rows.Close(); err != nil {
+		warn("cannot close the index list", zap.Error(err))
+	}
+	if err := rows.Err(); err != nil {
+		warn("cannot read the index list", zap.Error(err))
+	}
+	for _, c := range drop {
+		stmt := `DROP INDEX main."` + strings.ReplaceAll(c.name, `"`, `""`) + `"`
+		if _, err := db.ExecContext(ctx, stmt); err != nil {
+			warn("cannot drop single-column index affected by the DuckDB 1.4.1 defect",
+				zap.String("index", c.name), zap.String("table", c.table), zap.Error(err))
+			continue
+		}
+		warn("dropped single-column index affected by the DuckDB 1.4.1 defect",
+			zap.String("index", c.name), zap.String("table", c.table))
+	}
 }

@@ -26,18 +26,19 @@ func (t *SearchTool) Name() string { return "brain.search" }
 func (t *SearchTool) Definition() mcplib.Tool {
 	return mcplib.Tool{
 		Name:        "brain.search",
-		Description: "Intelligent search across indexed codebases and documentation. Automatically selects the best search mode (keyword, semantic, or hybrid) based on the query.",
+		Description: "Intelligent search across indexed codebases and documentation. Automatically selects the best search mode (keyword, semantic, or hybrid) based on the query. response_format=detailed (default) returns the compact list; concise returns URI, title, chunk id, score and a short snippet per result.",
 		InputSchema: mcplib.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]interface{}{
-				"query":       map[string]interface{}{"type": "string", "description": "Search query or question"},
-				"mode":        map[string]interface{}{"type": "string", "description": "Search mode: 'auto', 'bm25', 'vector', 'hybrid'. Default: 'auto'", "enum": []string{"auto", "bm25", "vector", "hybrid"}},
-				"max_results": map[string]interface{}{"type": "integer", "description": "Maximum results to return (default 20, max 100)"},
-				"alpha":       map[string]interface{}{"type": "number", "description": "Weight for vector vs BM25 in hybrid mode (0.0=full BM25, 1.0=full vector, default 0.6)"},
-				"doc_types":   map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}, "description": "Filter by document type: 'code', 'markdown', 'config'"},
-				"languages":   map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}, "description": "Filter by programming language"},
-				"source_ids":  map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}, "description": "Filter by source IDs"},
-				"tenant_id":   map[string]interface{}{"type": "string", "description": "Tenant ID (optional)"},
+				"query":           map[string]interface{}{"type": "string", "description": "Search query or question"},
+				"mode":            map[string]interface{}{"type": "string", "description": "Search mode: 'auto', 'bm25', 'vector', 'hybrid'. Default: 'auto'", "enum": []string{"auto", "bm25", "vector", "hybrid"}},
+				"max_results":     map[string]interface{}{"type": "integer", "description": "Maximum results to return (default 20, max 100)"},
+				"alpha":           map[string]interface{}{"type": "number", "description": "Weight for vector vs BM25 in hybrid mode (0.0=full BM25, 1.0=full vector, default 0.6)"},
+				"doc_types":       map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}, "description": "Filter by document type: 'code', 'markdown', 'config'"},
+				"languages":       map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}, "description": "Filter by programming language"},
+				"source_ids":      map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}, "description": "Filter by source IDs"},
+				"tenant_id":       map[string]interface{}{"type": "string", "description": "Tenant ID (optional)"},
+				"response_format": responseFormatProperty,
 			},
 			Required: []string{"query"},
 		},
@@ -56,8 +57,13 @@ func (t *SearchTool) Handler() ToolHandler {
 			Languages  []string `json:"languages"`
 			SourceIDs  []string `json:"source_ids"`
 			TenantID   string   `json:"tenant_id"`
+			Format     string   `json:"response_format"`
 		}
 		if err := parseArgs(request.Params.Arguments, &args); err != nil {
+			return errorResult(err.Error()), nil
+		}
+		format, err := parseResponseFormat(args.Format)
+		if err != nil {
 			return errorResult(err.Error()), nil
 		}
 		if args.Query == "" {
@@ -83,6 +89,9 @@ func (t *SearchTool) Handler() ToolHandler {
 			return errorResult(err.Error()), nil
 		}
 
+		if format == responseFormatConcise {
+			return t.wrapper.Wrap(buildConciseSearchResponse(result)), nil
+		}
 		return t.wrapper.Wrap(buildCompactSearchResponse(result)), nil
 	}
 }

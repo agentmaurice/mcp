@@ -41,6 +41,12 @@ func WithAtomicWriter(ctx context.Context, manager Manager, tenantID string, fn 
 	return manager.WithWriter(ctx, tenantID, fn)
 }
 
+// FullTextOptions is an alias so callers can keep using storage.FullTextOptions.
+type FullTextOptions = types.FullTextOptions
+
+// FullTextIndexer is an alias so callers can keep using storage.FullTextIndexer.
+type FullTextIndexer = types.FullTextIndexer
+
 // Factory creates a backend manager.
 type Factory func(cfg config.StorageConfig, logger *zap.Logger) (Manager, error)
 

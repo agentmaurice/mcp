@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/logging"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/security"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/shared"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/storage"
@@ -91,7 +92,7 @@ func (s *Server) handleEntitiesResource(ctx context.Context, request mcp.ReadRes
 
 	db, err := s.storage.OpenTenant(ctx, tenantID)
 	if err != nil {
-		s.logger.Error("failed to open tenant database", zap.Error(err), zap.String("tenant", tenantID))
+		s.logger.Error("failed to open tenant database", logging.ErrorClass(err), zap.String("tenant", tenantID))
 		return nil, fmt.Errorf("failed to open tenant: %w", err)
 	}
 
@@ -116,7 +117,7 @@ func (s *Server) handleEntitiesResource(ctx context.Context, request mcp.ReadRes
 		`, entityType)
 	}
 	if err != nil {
-		s.logger.Error("failed to query entities", zap.Error(err), zap.String("entity_type", entityType))
+		s.logger.Error("failed to query entities", logging.ErrorClass(err), zap.String("entity_type", entityType))
 		return nil, fmt.Errorf("failed to query entities: %w", err)
 	}
 
@@ -178,7 +179,7 @@ func (s *Server) handleEntityResource(ctx context.Context, request mcp.ReadResou
 
 	db, err := s.storage.OpenTenant(ctx, tenantID)
 	if err != nil {
-		s.logger.Error("failed to open tenant database", zap.Error(err), zap.String("tenant", tenantID))
+		s.logger.Error("failed to open tenant database", logging.ErrorClass(err), zap.String("tenant", tenantID))
 		return nil, fmt.Errorf("failed to open tenant: %w", err)
 	}
 
@@ -194,7 +195,7 @@ func (s *Server) handleEntityResource(ctx context.Context, request mcp.ReadResou
 		WHERE entity_id = ?
 	`, entityID)
 	if err != nil {
-		s.logger.Error("failed to query entity", zap.Error(err), zap.String("entity_id", entityID))
+		s.logger.Error("failed to query entity", logging.ErrorClass(err), zap.String("entity_id", entityID))
 		return nil, fmt.Errorf("failed to query entity: %w", err)
 	}
 	if len(qr.Rows) == 0 {
@@ -250,7 +251,7 @@ func (s *Server) handleFactsResource(ctx context.Context, request mcp.ReadResour
 
 	db, err := s.storage.OpenTenant(ctx, tenantID)
 	if err != nil {
-		s.logger.Error("failed to open tenant database", zap.Error(err), zap.String("tenant", tenantID))
+		s.logger.Error("failed to open tenant database", logging.ErrorClass(err), zap.String("tenant", tenantID))
 		return nil, fmt.Errorf("failed to open tenant: %w", err)
 	}
 
@@ -274,7 +275,7 @@ func (s *Server) handleFactsResource(ctx context.Context, request mcp.ReadResour
 		`, factType)
 	}
 	if err != nil {
-		s.logger.Error("failed to query facts", zap.Error(err), zap.String("fact_type", factType))
+		s.logger.Error("failed to query facts", logging.ErrorClass(err), zap.String("fact_type", factType))
 		return nil, fmt.Errorf("failed to query facts: %w", err)
 	}
 
@@ -335,7 +336,7 @@ func (s *Server) handleDocumentsResource(ctx context.Context, request mcp.ReadRe
 
 	db, err := s.storage.OpenTenant(ctx, tenantID)
 	if err != nil {
-		s.logger.Error("failed to open tenant database", zap.Error(err), zap.String("tenant", tenantID))
+		s.logger.Error("failed to open tenant database", logging.ErrorClass(err), zap.String("tenant", tenantID))
 		return nil, fmt.Errorf("failed to open tenant: %w", err)
 	}
 
@@ -346,7 +347,7 @@ func (s *Server) handleDocumentsResource(ctx context.Context, request mcp.ReadRe
 		LIMIT 100
 	`)
 	if err != nil {
-		s.logger.Error("failed to query documents", zap.Error(err))
+		s.logger.Error("failed to query documents", logging.ErrorClass(err))
 		return nil, fmt.Errorf("failed to query documents: %w", err)
 	}
 
@@ -411,7 +412,7 @@ func (s *Server) handleViewsResource(ctx context.Context, request mcp.ReadResour
 
 	db, err := s.storage.OpenTenant(ctx, tenantID)
 	if err != nil {
-		s.logger.Error("failed to open tenant database", zap.Error(err), zap.String("tenant", tenantID))
+		s.logger.Error("failed to open tenant database", logging.ErrorClass(err), zap.String("tenant", tenantID))
 		return nil, fmt.Errorf("failed to open tenant: %w", err)
 	}
 
@@ -424,7 +425,7 @@ func (s *Server) handleViewsResource(ctx context.Context, request mcp.ReadResour
 		ORDER BY table_name
 	`)
 	if err != nil {
-		s.logger.Error("failed to query views", zap.Error(err))
+		s.logger.Error("failed to query views", logging.ErrorClass(err))
 		return nil, fmt.Errorf("failed to query views: %w", err)
 	}
 

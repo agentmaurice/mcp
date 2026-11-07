@@ -11,7 +11,20 @@ import (
 	"github.com/agentmaurice/mcpchatui/mcp/brain/internal/indexer/embedder"
 	"github.com/agentmaurice/mcpchatui/mcp/brain/internal/shared"
 	"github.com/agentmaurice/mcpchatui/mcp/brain/internal/storage"
+	storagesearch "github.com/agentmaurice/mcpchatui/mcp/brain/internal/storage/search"
+	"github.com/agentmaurice/mcpchatui/mcp/shared/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/zap"
+)
+
+const (
+	defaultFTSStemmer   = "porter"
+	defaultFTSStopwords = "none"
+	// Chunks of a tenant without any document are reported, not silently empty.
+	emptyTenantWarningFmt = "tenant %q has no indexed documents: index content with brain.index or brain.document.upsert before searching"
+	// keywordFallbackWarning is returned when ranked BM25 is unavailable.
+	keywordFallbackWarning = "full-text index unavailable (%s): results are substring matches in document order, not BM25-ranked"
 )
 
 var (
@@ -43,8 +56,24 @@ func NewOrchestrator(storage storage.Manager, embedder embedder.Provider, cfg *c
 	}
 }
 
-// Search performs a search with the given options.
-func (o *Orchestrator) Search(ctx context.Context, tenantID string, query string, opts shared.SearchOpts) (*shared.SearchResponse, error) {
+// Search performs a search with the given options, inside a brain.search
+// span (mode, result count; never the query text nor the tenant).
+func (o *Orchestrator) Search(ctx context.Context, tenantID string, query string, opts shared.SearchOpts) (response *shared.SearchResponse, err error) {
+	ctx, span := telemetry.Tracer().Start(ctx, "brain.search")
+	defer func() {
+		if response != nil {
+			span.SetAttributes(
+				attribute.String("brain.search.mode", response.Mode),
+				attribute.Int("brain.search.results", response.TotalResults),
+				attribute.String("brain.search.bm25_mode", response.SearchMetadata.BM25ModeEffective),
+				attribute.Bool("brain.search.tenant_empty", response.SearchMetadata.TenantEmpty),
+			)
+		}
+		if err != nil {
+			span.SetStatus(codes.Error, "search failed")
+		}
+		span.End()
+	}()
 	start := time.Now()
 
 	mode := opts.Mode
@@ -69,7 +98,6 @@ func (o *Orchestrator) Search(ctx context.Context, tenantID string, query string
 
 	var results []shared.SearchResult
 	var meta shared.SearchMetadata
-	var err error
 
 	switch mode {
 	case "bm25":
@@ -87,6 +115,13 @@ func (o *Orchestrator) Search(ctx context.Context, tenantID string, query string
 
 	if err != nil {
 		return nil, err
+	}
+
+	if len(results) == 0 {
+		if empty, checkErr := o.tenantHasNoDocuments(ctx, tenantID); checkErr == nil && empty {
+			meta.TenantEmpty = true
+			meta.Warnings = append(meta.Warnings, fmt.Sprintf(emptyTenantWarningFmt, tenantID))
+		}
 	}
 
 	elapsed := time.Since(start)
@@ -148,7 +183,10 @@ func (o *Orchestrator) detectMode(query string) (string, string) {
 	return "bm25", "short query, defaulting to keyword search"
 }
 
-// searchBM25 performs a BM25-only search.
+// searchBM25 ranks chunks by BM25 on the FTS index. Identifiers found in the
+// query (AGENT-530, calcul_taux_marge) are matched verbatim and placed first.
+// When the index cannot answer, it falls back to substring matching and says so
+// in search_metadata.bm25_mode_effective and warnings.
 func (o *Orchestrator) searchBM25(ctx context.Context, tenantID, query string, maxResults int, opts shared.SearchOpts) ([]shared.SearchResult, shared.SearchMetadata, error) {
 	start := time.Now()
 
@@ -156,47 +194,154 @@ func (o *Orchestrator) searchBM25(ctx context.Context, tenantID, query string, m
 	if err != nil {
 		return nil, shared.SearchMetadata{}, fmt.Errorf("failed to open tenant: %w", err)
 	}
+	filters := storagesearch.Filters{DocTypes: opts.DocTypes, Languages: opts.Languages, SourceIDs: opts.SourceIDs}
 
-	qr, err := db.QueryContext(ctx, `
-		SELECT c.id, c.document_id, c.content, c.chunk_type, c.symbol_name, c.start_line, c.end_line,
-			   d.id, d.file_path, d.title, d.doc_type, d.language, d.source_id
-		FROM chunks c
-		JOIN documents d ON c.document_id = d.id
-		WHERE c.tenant_id = ? AND c.bm25_content LIKE '%' || ? || '%'
-		LIMIT ?
-	`, tenantID, query, maxResults)
+	var exact []storagesearch.BM25SearchResult
+	var ignoredIdentifiers []string
+	if identifiers := ExtractIdentifiers(query); len(identifiers) > 0 {
+		exact, ignoredIdentifiers, err = storagesearch.SearchExactIdentifiers(ctx, db, tenantID, identifiers, maxResults, filters)
+		if err != nil {
+			return nil, shared.SearchMetadata{}, err
+		}
+	}
+
+	ranked, effective, warning, err := o.keywordHits(ctx, db, tenantID, query, maxResults, filters)
 	if err != nil {
-		return nil, shared.SearchMetadata{}, fmt.Errorf("BM25 search failed: %w", err)
+		return nil, shared.SearchMetadata{}, err
 	}
 
-	var results []shared.SearchResult
-	score := 1.0
-	for _, row := range qr.Rows {
-		var r shared.SearchResult
-		r.Chunk.ID = toString(row["id"])
-		r.Chunk.DocumentID = toString(row["document_id"])
-		r.Chunk.Content = toString(row["content"])
-		r.Chunk.ChunkType = toString(row["chunk_type"])
-		r.Chunk.SymbolName = toString(row["symbol_name"])
-		r.Chunk.StartLine = toInt(row["start_line"])
-		r.Chunk.EndLine = toInt(row["end_line"])
-		r.Document.ID = toString(row[qr.Columns[7]])
-		r.Document.FilePath = toString(row["file_path"])
-		r.Document.Title = toString(row["title"])
-		r.Document.DocType = toString(row["doc_type"])
-		r.Document.Language = toString(row["language"])
-		r.Document.SourceID = toString(row["source_id"])
-		r.Score = score
-		score -= 0.01
-		r.ChunkID = r.Chunk.ID
-		results = append(results, r)
+	meta := shared.SearchMetadata{BM25ModeEffective: effective}
+	if warning != "" {
+		meta.Warnings = append(meta.Warnings, warning)
+	}
+	if len(ignoredIdentifiers) > 0 {
+		meta.Warnings = append(meta.Warnings, fmt.Sprintf(
+			"%d identifier(s) beyond the first %d were not matched verbatim: %s",
+			len(ignoredIdentifiers), storagesearch.MaxExactIdentifiers, strings.Join(ignoredIdentifiers, ", ")))
 	}
 
-	meta := shared.SearchMetadata{
-		BM25TimeMs: time.Since(start).Milliseconds(),
+	topScore := 0.0
+	if len(ranked) > 0 {
+		topScore = ranked[0].Score
+	}
+	results := make([]shared.SearchResult, 0, maxResults)
+	seen := make(map[string]struct{}, len(exact)+len(ranked))
+	for _, hit := range exact {
+		if _, dup := seen[hit.ChunkID]; dup {
+			continue
+		}
+		seen[hit.ChunkID] = struct{}{}
+		// Above every ranked hit, so the verbatim matches stay first after fusion too.
+		results = append(results, toSharedResult(hit, "exact_identifier", topScore+1))
+	}
+	meta.IdentifierMatches = len(results)
+
+	matchType := "bm25"
+	if effective == "substring_fallback" {
+		matchType = "substring"
+	}
+	for i, hit := range ranked {
+		if _, dup := seen[hit.ChunkID]; dup {
+			continue
+		}
+		seen[hit.ChunkID] = struct{}{}
+		score := hit.Score
+		if matchType == "substring" {
+			// Substring hits are unranked: keep a decreasing order in document order.
+			score = 1.0 / float64(i+1)
+		}
+		results = append(results, toSharedResult(hit, matchType, score))
+	}
+	if len(results) > maxResults {
+		results = results[:maxResults]
 	}
 
+	meta.BM25TimeMs = time.Since(start).Milliseconds()
 	return results, meta, nil
+}
+
+// keywordHits returns ranked hits from the FTS index, or substring hits with the
+// reason when the index is unavailable. Only a failing fallback query is an error.
+func (o *Orchestrator) keywordHits(ctx context.Context, db storage.Querier, tenantID, query string, maxResults int, filters storagesearch.Filters) ([]storagesearch.BM25SearchResult, string, string, error) {
+	indexer, ok := o.storage.(storage.FullTextIndexer)
+	if !ok {
+		reason := fmt.Sprintf("storage backend %q has no full-text index", o.storage.Backend())
+		return o.substringHits(ctx, db, tenantID, query, maxResults, filters, reason)
+	}
+	ensureCtx, ensureSpan := telemetry.Tracer().Start(ctx, "brain.fts.ensure")
+	err := indexer.EnsureFullTextIndex(ensureCtx, tenantID, o.ftsOptions())
+	if err != nil {
+		ensureSpan.SetStatus(codes.Error, "full-text index unavailable")
+	}
+	ensureSpan.End()
+	if err != nil {
+		o.logger.Warn("BM25 index unavailable, falling back to substring search",
+			zap.String("tenant", tenantID), zap.Error(err))
+		return o.substringHits(ctx, db, tenantID, query, maxResults, filters, err.Error())
+	}
+	hits, err := storagesearch.SearchBM25(ctx, db, tenantID, query, maxResults, filters)
+	if err != nil {
+		o.logger.Warn("BM25 query failed, falling back to substring search",
+			zap.String("tenant", tenantID), zap.Error(err))
+		return o.substringHits(ctx, db, tenantID, query, maxResults, filters, err.Error())
+	}
+	return hits, "fts", "", nil
+}
+
+func (o *Orchestrator) substringHits(ctx context.Context, db storage.Querier, tenantID, query string, maxResults int, filters storagesearch.Filters, reason string) ([]storagesearch.BM25SearchResult, string, string, error) {
+	hits, err := storagesearch.SearchSubstring(ctx, db, tenantID, query, maxResults, filters)
+	if err != nil {
+		return nil, "", "", err
+	}
+	return hits, "substring_fallback", fmt.Sprintf(keywordFallbackWarning, reason), nil
+}
+
+func (o *Orchestrator) ftsOptions() storage.FullTextOptions {
+	opts := storage.FullTextOptions{Stemmer: o.cfg.Search.FTSStemmer, Stopwords: o.cfg.Search.FTSStopwords}
+	if opts.Stemmer == "" {
+		opts.Stemmer = defaultFTSStemmer
+	}
+	if opts.Stopwords == "" {
+		opts.Stopwords = defaultFTSStopwords
+	}
+	return opts
+}
+
+// tenantHasNoDocuments reports whether the tenant has no document at all.
+func (o *Orchestrator) tenantHasNoDocuments(ctx context.Context, tenantID string) (bool, error) {
+	db, err := o.storage.OpenTenant(ctx, tenantID)
+	if err != nil {
+		return false, err
+	}
+	qr, err := db.QueryContext(ctx, `SELECT COUNT(*) AS n FROM (SELECT 1 FROM documents WHERE tenant_id = ? LIMIT 1) t`, tenantID)
+	if err != nil {
+		return false, err
+	}
+	if len(qr.Rows) == 0 {
+		return true, nil
+	}
+	return toInt(qr.Rows[0]["n"]) == 0, nil
+}
+
+func toSharedResult(hit storagesearch.BM25SearchResult, matchType string, score float64) shared.SearchResult {
+	var r shared.SearchResult
+	r.Score = score
+	r.MatchType = matchType
+	r.Chunk.ID = hit.ChunkID
+	r.Chunk.DocumentID = hit.DocumentID
+	r.Chunk.Content = hit.Content
+	r.Chunk.ChunkType = hit.ChunkType
+	r.Chunk.SymbolName = hit.SymbolName
+	r.Chunk.StartLine = hit.StartLine
+	r.Chunk.EndLine = hit.EndLine
+	r.Document.ID = hit.DocumentID
+	r.Document.FilePath = hit.FilePath
+	r.Document.Title = hit.Title
+	r.Document.DocType = hit.DocType
+	r.Document.Language = hit.Language
+	r.Document.SourceID = hit.SourceID
+	r.ChunkID = hit.ChunkID
+	return r
 }
 
 // searchVector performs a vector-only search.
@@ -296,6 +441,16 @@ func (o *Orchestrator) searchHybrid(ctx context.Context, tenantID, query string,
 	vectorResult := <-vectorCh
 
 	var meta shared.SearchMetadata
+	if bm25Result.err != nil {
+		meta.Warnings = append(meta.Warnings, fmt.Sprintf("keyword leg failed: %v", bm25Result.err))
+	} else {
+		meta.BM25ModeEffective = bm25Result.meta.BM25ModeEffective
+		meta.IdentifierMatches = bm25Result.meta.IdentifierMatches
+		meta.Warnings = append(meta.Warnings, bm25Result.meta.Warnings...)
+	}
+	if vectorResult.err != nil {
+		meta.Warnings = append(meta.Warnings, fmt.Sprintf("vector leg skipped: %v", vectorResult.err))
+	}
 
 	// Collect results from both, normalize and fuse
 	scoreMap := make(map[string]*shared.SearchResult) // chunk_id → result

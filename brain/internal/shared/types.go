@@ -80,6 +80,9 @@ type SearchResult struct {
 	Document Document `json:"document"`
 	Chunk    Chunk    `json:"chunk"`
 	Source   Source   `json:"source,omitempty"`
+	// MatchType is "exact_identifier" for a verbatim identifier hit, "bm25" for a
+	// ranked full-text hit, and "substring" for the explicit fallback.
+	MatchType string `json:"match_type,omitempty"`
 }
 
 // SearchResponse wraps the full search response.
@@ -98,6 +101,18 @@ type SearchMetadata struct {
 	TotalTimeMs  int64  `json:"total_time_ms"`
 	ModeSelected string `json:"mode_selected"`
 	ModeReason   string `json:"mode_reason"`
+	// BM25ModeEffective is "fts" when the ranked index answered, or
+	// "substring_fallback" when the index was unavailable (see Warnings).
+	BM25ModeEffective string `json:"bm25_mode_effective,omitempty"`
+	// IdentifierMatches counts verbatim identifier hits placed before the ranked hits.
+	IdentifierMatches int `json:"identifier_matches,omitempty"`
+	// TenantEmpty is true when the tenant has no indexed document at all.
+	TenantEmpty bool `json:"tenant_empty,omitempty"`
+	// Warnings explains degraded or empty results in plain text.
+	Warnings []string `json:"warnings,omitempty"`
+	// SnippetFallback is true in a concise response when, for at least one result,
+	// no query term was found in the chunk and the snippet starts at its beginning.
+	SnippetFallback bool `json:"snippet_fallback,omitempty"`
 }
 
 // SearchOpts defines search parameters.

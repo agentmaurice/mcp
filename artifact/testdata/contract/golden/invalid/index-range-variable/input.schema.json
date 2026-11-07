@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "required": [
+    "flag",
+    "items"
+  ],
+  "properties": {
+    "flag": {
+      "type": "boolean"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

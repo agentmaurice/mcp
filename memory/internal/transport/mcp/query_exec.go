@@ -9,9 +9,13 @@ import (
 	"time"
 
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/config"
+	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/logging"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/security"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/shared"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/storage"
+	"github.com/agentmaurice/mcpchatui/mcp/shared/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/zap"
 )
 
@@ -26,16 +30,18 @@ func executeQuery(ctx context.Context, storage storage.Manager, cfg *config.Conf
 		logger = zap.NewNop()
 	}
 
+	logging.Debug(logger, "executeQuery sql", "sql", sqlText, zap.String("tenant_id", tenantID))
+	logging.DebugValue(logger, "executeQuery params", "params", params)
 	logger.Debug("executeQuery called",
 		zap.String("tenant_id", tenantID),
-		zap.String("sql", sqlText),
-		zap.Any("params", params),
+		logging.Size("sql", sqlText),
+		logging.SizeOf("params", params),
 		zap.Int("maxRows", maxRows),
 		zap.Int("timeoutMs", timeoutMs),
 	)
 
 	if len(params) > 0 && storage != nil && strings.ToLower(storage.Dialect()) == "postgres" {
-		logger.Warn("query parameters not supported for postgres backend", zap.Any("params", params))
+		logger.Warn("query parameters not supported for postgres backend", logging.SizeOf("params", params))
 		return nil, fmt.Errorf("query parameters are not supported for postgres backend")
 	}
 
@@ -53,8 +59,19 @@ func executeQuery(ctx context.Context, storage storage.Manager, cfg *config.Conf
 		timeoutMs = cfg.Query.TimeoutMsMax
 	}
 
+	// memory.query.validate covers the guardrails up to the allowed objects;
+	// a rejected query ends it in error.
+	_, validateSpan := telemetry.Tracer().Start(ctx, "memory.query.validate")
+	validated := false
+	defer func() {
+		if !validated {
+			validateSpan.SetStatus(codes.Error, "query rejected")
+			validateSpan.End()
+		}
+	}()
+
 	if err := security.ValidateReadOnly(sqlText, cfg.Security.Denylist); err != nil {
-		logger.Warn("query validation failed: read-only check", zap.Error(err), zap.String("sql", sqlText))
+		logger.Warn("query validation failed: read-only check", logging.ErrorClass(err), logging.Size("sql", sqlText))
 		return nil, err
 	}
 
@@ -65,6 +82,7 @@ func executeQuery(ctx context.Context, storage storage.Manager, cfg *config.Conf
 
 	var info *security.SQLInfo
 	if cached, ok := sqlValidationCache.Get(sqlText, rules); ok {
+		validateSpan.SetAttributes(attribute.Bool("memory.query.validation_cached", true))
 		if cached.Err != nil {
 			return nil, cached.Err
 		}
@@ -74,13 +92,16 @@ func executeQuery(ctx context.Context, storage storage.Manager, cfg *config.Conf
 		info, err = security.ValidatePortableSQL(sqlText, rules)
 		sqlValidationCache.Put(sqlText, rules, security.ValidationResult{Info: info, Err: err})
 		if err != nil {
-			logger.Warn("query validation failed: portable SQL check", zap.Error(err), zap.String("sql", sqlText))
+			logger.Warn("query validation failed: portable SQL check", logging.ErrorClass(err), logging.Size("sql", sqlText))
 			return nil, err
 		}
 	}
 
 	sqlText = strings.TrimSpace(sqlText)
-	sqlText, limitModified := security.EnsureLimit(sqlText, maxRows)
+	// Ask for one row beyond the cap. A row past the cap is the only proof that
+	// rows were dropped; EnsureLimit's "modified" flag only says a LIMIT was added
+	// or lowered, which is not a truncation.
+	sqlText, _ = security.EnsureLimit(sqlText, maxRows+1)
 
 	tables := info.Tables
 	if len(tables) == 0 {
@@ -90,15 +111,17 @@ func executeQuery(ctx context.Context, storage storage.Manager, cfg *config.Conf
 		for _, table := range tables {
 			lower := strings.ToLower(table)
 			if cfg.Security.RequireViewsOnly && !(strings.HasPrefix(lower, "v_") || strings.HasPrefix(lower, "app_")) {
-				logger.Warn("table not allowed (views only)", zap.String("table", table), zap.String("sql", sqlText))
+				logger.Warn("table not allowed (views only)", logging.Text("table", table), logging.Size("sql", sqlText))
 				return nil, fmt.Errorf("table %s is not allowed (views only)", table)
 			}
 			if !security.IsAllowedObject(table, cfg.Security.AllowedObjects) {
-				logger.Warn("object not allowed", zap.String("table", table), zap.Strings("allowed", cfg.Security.AllowedObjects))
+				logger.Warn("object not allowed", logging.Text("table", table), zap.Strings("allowed", cfg.Security.AllowedObjects))
 				return nil, fmt.Errorf("object %s is not allowed", table)
 			}
 		}
 	}
+	validated = true
+	validateSpan.End()
 
 	if tenantID == "" {
 		identity := shared.IdentityFromContext(ctx)
@@ -111,7 +134,7 @@ func executeQuery(ctx context.Context, storage storage.Manager, cfg *config.Conf
 	logger.Debug("opening tenant database", zap.String("tenant_id", tenantID))
 	db, err := storage.OpenTenant(ctx, tenantID)
 	if err != nil {
-		logger.Error("failed to open tenant database", zap.Error(err), zap.String("tenant_id", tenantID))
+		logger.Error("failed to open tenant database", logging.ErrorClass(err), zap.String("tenant_id", tenantID))
 		return nil, err
 	}
 
@@ -123,8 +146,9 @@ func executeQuery(ctx context.Context, storage storage.Manager, cfg *config.Conf
 		args = append(args, sql.Named(key, val))
 	}
 
+	logging.Debug(logger, "executing SQL query", "sql", sqlText)
 	logger.Debug("executing SQL query",
-		zap.String("sql", sqlText),
+		logging.Size("sql", sqlText),
 		zap.Int("timeout_ms", timeoutMs),
 		zap.Int("param_count", len(args)),
 	)
@@ -133,11 +157,12 @@ func executeQuery(ctx context.Context, storage storage.Manager, cfg *config.Conf
 	qr, err := db.QueryContext(ctxTimeout, sqlText, args...)
 	if err != nil {
 		logger.Error("SQL query execution failed",
-			zap.Error(err),
-			zap.String("sql", sqlText),
+			logging.ErrorClass(err),
+			logging.Size("sql", sqlText),
 			zap.String("tenant_id", tenantID),
 			zap.Duration("elapsed", time.Since(start)),
 		)
+		logging.DebugError(logger, "SQL query execution error text", err)
 		return nil, err
 	}
 
@@ -154,6 +179,11 @@ func executeQuery(ctx context.Context, storage storage.Manager, cfg *config.Conf
 			values[i] = normalizeValue(row[col])
 		}
 		resultRows = append(resultRows, values)
+	}
+	rowCapReached := false
+	if len(resultRows) > maxRows {
+		resultRows = resultRows[:maxRows]
+		rowCapReached = true
 	}
 
 	logger.Debug("query executed successfully",
@@ -178,11 +208,28 @@ func executeQuery(ctx context.Context, storage storage.Manager, cfg *config.Conf
 	result := &shared.QueryResult{
 		Columns:   colMeta,
 		Rows:      resultRows,
-		Truncated: limitModified,
+		Truncated: rowCapReached,
 		QueryStats: shared.QueryStats{
 			ElapsedMs: time.Since(start).Milliseconds(),
 			RowCount:  len(resultRows),
 		},
+	}
+	// Any query on a tenant without entity, document or fact is flagged, whatever the
+	// number of rows: an aggregate such as COUNT(*) returns one row that reflects the
+	// empty tenant.
+	// A failed check is not a guess: tenant_empty becomes null (unknown) and the
+	// warning says why.
+	switch empty, checkErr := tenantDataCheck(ctx, db); {
+	case checkErr != nil:
+		result.TenantEmpty = nil
+		result.Warnings = append(result.Warnings, fmt.Sprintf("tenant emptiness check failed: %v", checkErr))
+	case empty:
+		flag := true
+		result.TenantEmpty = &flag
+		result.Warnings = append(result.Warnings, emptyTenantWarning)
+	default:
+		flag := false
+		result.TenantEmpty = &flag
 	}
 
 	if cfg.Query.MaxResponseBytes > 0 {
@@ -192,6 +239,30 @@ func executeQuery(ctx context.Context, storage storage.Manager, cfg *config.Conf
 	}
 
 	return result, nil
+}
+
+// emptyTenantWarning is the warning for a tenant without entity, document or fact.
+const emptyTenantWarning = "the tenant has no entities, documents or facts ; the query result reflects an empty tenant"
+
+// tenantDataCheck reports whether the tenant has no entity, document or fact. The
+// check only reads the tenant store, so it never reveals other tenants. Any failure
+// (cancelled context, SQL error, unexpected shape) is returned: the caller must not
+// guess.
+func tenantDataCheck(ctx context.Context, db storage.Querier) (bool, error) {
+	// Soft-deleted rows do not count, and a NULL flag is invisible too, as in the schema
+	// views (WHERE is_deleted = false): a tenant whose rows are all deleted or NULL is empty.
+	qr, err := db.QueryContext(ctx, `SELECT (EXISTS (SELECT 1 FROM entities WHERE is_deleted = false) OR EXISTS (SELECT 1 FROM documents WHERE is_deleted = false) OR EXISTS (SELECT 1 FROM facts WHERE is_deleted = false)) AS has_data`)
+	if err != nil {
+		return false, err
+	}
+	if qr == nil || len(qr.Rows) == 0 {
+		return false, fmt.Errorf("no row returned")
+	}
+	hasData, ok := qr.Rows[0]["has_data"].(bool)
+	if !ok {
+		return false, fmt.Errorf("unexpected has_data value %T", qr.Rows[0]["has_data"])
+	}
+	return !hasData, nil
 }
 
 func enforceResponseSize(result *shared.QueryResult, maxBytes int) bool {
@@ -311,7 +382,7 @@ func fetchPolicyRules(ctx context.Context, db storage.Querier, logger *zap.Logge
 	qr, err := db.QueryContext(ctx, "SELECT column_path, action FROM pii_policy")
 	if err != nil {
 		if logger != nil {
-			logger.Debug("pii_policy query failed", zap.Error(err))
+			logger.Debug("pii_policy query failed", logging.ErrorClass(err))
 		}
 		return nil
 	}

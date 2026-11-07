@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/config"
+	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/logging"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/storage"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/rs/xid"
@@ -87,7 +88,8 @@ func (t *UpsertEntitiesTool) Definition() mcp.Tool {
 
 func (t *UpsertEntitiesTool) Handler() ToolHandler {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		t.logger.Info("tool called", zap.Any("arguments", request.Params.Arguments))
+		t.logger.Info("tool called", zap.String("tool", t.Name()), logging.SizeOf("arguments", request.Params.Arguments))
+		logging.DebugValue(t.logger, "tool arguments", "arguments", request.Params.Arguments, zap.String("tool", t.Name()))
 
 		var args struct {
 			TenantID   string `json:"tenant_id"`
@@ -102,31 +104,32 @@ func (t *UpsertEntitiesTool) Handler() ToolHandler {
 			Writer WriterInput `json:"writer"`
 		}
 		if err := parseArgs(request.Params.Arguments, &args); err != nil {
-			t.logger.Warn("failed to parse arguments", zap.Error(err), zap.Any("raw_arguments", request.Params.Arguments))
+			t.logger.Warn("failed to parse arguments", zap.String("tool", t.Name()), logging.ErrorClass(err), logging.SizeOf("raw_arguments", request.Params.Arguments))
+			logging.DebugValue(t.logger, "unparsed arguments", "raw_arguments", request.Params.Arguments, zap.String("tool", t.Name()))
 			return errorResult("failed to parse arguments"), nil
 		}
 
 		t.logger.Debug("parsed arguments",
-			zap.String("entity_type", args.EntityType),
+			logging.Text("entity_type", args.EntityType),
 			zap.Int("item_count", len(args.Items)),
 		)
 
 		if args.EntityType == "" || len(args.Items) == 0 {
-			t.logger.Warn("missing required fields", zap.String("entity_type", args.EntityType), zap.Int("item_count", len(args.Items)))
+			t.logger.Warn("missing required fields", logging.Text("entity_type", args.EntityType), zap.Int("item_count", len(args.Items)))
 			return errorResult("entityType and items are required"), nil
 		}
 		if args.Source.System == "" || args.Source.Timestamp == "" {
-			t.logger.Warn("missing source fields", zap.String("system", args.Source.System), zap.String("timestamp", args.Source.Timestamp))
+			t.logger.Warn("missing source fields", logging.Text("system", args.Source.System), logging.Text("timestamp", args.Source.Timestamp))
 			return errorResult("source.system and source.timestamp are required"), nil
 		}
 		if args.Writer.AppID == "" || args.Writer.ActorID == "" {
-			t.logger.Warn("missing writer fields", zap.String("app_id", args.Writer.AppID), zap.String("actor_id", args.Writer.ActorID))
+			t.logger.Warn("missing writer fields", logging.Text("app_id", args.Writer.AppID), logging.Text("actor_id", args.Writer.ActorID))
 			return errorResult("writer.appId and writer.actorId are required"), nil
 		}
 
 		tenantID, err := resolveTenantID(ctx, t.cfg, args.TenantID, request.Params.Arguments)
 		if err != nil {
-			t.logger.Warn("failed to resolve tenant ID", zap.Error(err))
+			t.logger.Warn("failed to resolve tenant ID", logging.ErrorClass(err))
 			return errorResult(err.Error()), nil
 		}
 
@@ -134,7 +137,7 @@ func (t *UpsertEntitiesTool) Handler() ToolHandler {
 
 		timestamp, err := time.Parse(time.RFC3339, args.Source.Timestamp)
 		if err != nil {
-			t.logger.Warn("invalid source.timestamp format", zap.String("timestamp", args.Source.Timestamp), zap.Error(err))
+			t.logger.Warn("invalid source.timestamp format", logging.Text("timestamp", args.Source.Timestamp), logging.ErrorClass(err))
 			return errorResult("invalid source.timestamp"), nil
 		}
 
@@ -191,8 +194,8 @@ func (t *UpsertEntitiesTool) Handler() ToolHandler {
 		})
 		if err != nil {
 			t.logger.Error("failed to upsert entities",
-				zap.Error(err),
-				zap.String("entity_type", args.EntityType),
+				logging.ErrorClass(err),
+				logging.Text("entity_type", args.EntityType),
 				zap.String("tenant_id", tenantID),
 				zap.Int("item_count", len(args.Items)),
 			)
@@ -200,7 +203,7 @@ func (t *UpsertEntitiesTool) Handler() ToolHandler {
 		}
 
 		t.logger.Info("entities upserted successfully",
-			zap.String("entity_type", args.EntityType),
+			logging.Text("entity_type", args.EntityType),
 			zap.Int("created", created),
 			zap.Int("updated", updated),
 		)

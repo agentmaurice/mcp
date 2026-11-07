@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/config"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/logging"
@@ -14,6 +15,8 @@ import (
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/shared"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/storage"
 	mcptransport "github.com/agentmaurice/mcpchatui/mcp/memory/internal/transport/mcp"
+	"github.com/agentmaurice/mcpchatui/mcp/shared/telemetry"
+	"github.com/agentmaurice/mcpchatui/mcp/shared/version"
 	"go.uber.org/zap"
 )
 
@@ -24,6 +27,8 @@ type App struct {
 	storage  storage.Manager
 	mcp      *mcptransport.Server
 	managers []shared.Manager
+
+	shutdownTelemetry func(context.Context) error
 }
 
 // New creates a new App instance.
@@ -49,11 +54,17 @@ func New() (*App, error) {
 func (a *App) Initialize(ctx context.Context, transport string) error {
 	a.logger.Info("initializing memory server")
 
+	shutdownTelemetry, err := telemetry.Init(ctx, "mcp-memory", version.Version)
+	if err != nil {
+		a.logger.Warn("trace export disabled", zap.Error(err))
+	}
+	a.shutdownTelemetry = shutdownTelemetry
+
 	manager, err := storage.NewManager(a.cfg.Storage, a.logger)
 	if err != nil {
 		return fmt.Errorf("failed to initialize storage backend: %w", err)
 	}
-	a.storage = manager
+	a.storage = storage.WithTracing(manager)
 
 	var responseWrapper *mcptransport.ResponseWrapper
 	if a.cfg.Buffer.Enabled {
@@ -146,6 +157,12 @@ func (a *App) Stop() error {
 
 	if a.storage != nil {
 		_ = a.storage.Close()
+	}
+
+	if a.shutdownTelemetry != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = a.shutdownTelemetry(ctx)
 	}
 
 	return nil

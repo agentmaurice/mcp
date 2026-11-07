@@ -1,3 +1,6 @@
+# SIDECAR_IMAGE: mcp-sidecar base image (declared before the first FROM to be usable in one).
+ARG SIDECAR_IMAGE
+
 FROM golang:1.26.0-bookworm@sha256:2a0ba12e116687098780d3ce700f9ce3cb340783779646aafbabed748fa6677c AS builder
 
 WORKDIR /src/mcp
@@ -11,12 +14,34 @@ COPY artifact ./artifact
 WORKDIR /src/mcp/artifact
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/artifact ./cmd/artifact
 
-ARG SIDECAR_IMAGE
 FROM ${SIDECAR_IMAGE} AS sidecar
+
+# Typst 0.15.1 (bench AGENT-1573): official static release, SHA-256 verified.
+FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818 AS typst
+ARG TARGETARCH
+ARG TYPST_VERSION=0.15.1
+ARG TYPST_SHA256_AMD64=a6d077d0a95eed5a2eba715b2dae06be954f624ccbf85758a03f389ded33118c
+ARG TYPST_SHA256_ARM64=5aa8d74a3d906e60ea12a66ac2f37f8eef1b14cbad7182a745e393a10c23dcee
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+RUN set -eu; \
+    case "${TARGETARCH:-amd64}" in \
+      amd64) triple=x86_64-unknown-linux-musl; sha="${TYPST_SHA256_AMD64}" ;; \
+      arm64) triple=aarch64-unknown-linux-musl; sha="${TYPST_SHA256_ARM64}" ;; \
+      *) echo "unsupported architecture ${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSLo /tmp/typst.tar.xz "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-${triple}.tar.xz"; \
+    echo "${sha}  /tmp/typst.tar.xz" | sha256sum -c -; \
+    tar -xJf /tmp/typst.tar.xz -C /tmp; \
+    install -m 0755 "/tmp/typst-${triple}/typst" /usr/local/bin/typst; \
+    mkdir -p /usr/share/doc/typst; \
+    cp "/tmp/typst-${triple}/LICENSE" "/tmp/typst-${triple}/NOTICE" /usr/share/doc/typst/
 
 FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818
 
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+# fonts-liberation2: free fonts (Arial/Helvetica metrics) next to Typst's embedded
+# Libertinus Serif, New Computer Modern and DejaVu Sans Mono.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates fonts-liberation2 \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -g 1000 app \
     && useradd -u 1000 -g app -m app \
@@ -25,12 +50,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 
 COPY --chmod=755 --from=builder /out/artifact /usr/local/bin/artifact
 COPY --chmod=755 --from=builder /src/mcp/artifact/docker/run-artifact-stdio.sh /usr/local/bin/run-artifact-stdio.sh
+COPY --chmod=755 --from=typst /usr/local/bin/typst /usr/local/bin/typst
+COPY --from=typst /usr/share/doc/typst /usr/share/doc/typst
 COPY --chmod=755 --from=sidecar /usr/local/bin/mcp_sidecar /usr/local/bin/mcp-sidecar
 
 WORKDIR /app
 USER app
 
 ENV TMPDIR=/tmp
+ENV TYPST_BIN=/usr/local/bin/typst
+ENV ARTIFACT_FONT_PATH=/usr/share/fonts/truetype/liberation2
 ENV MCP_CREDENTIALS_PATH=/var/mcp/credentials/credentials.json
 ENV MCP_SIDECAR_CREDENTIALS_PATH=/var/mcp/credentials
 ENV MCP_SIDECAR_LOCAL_MCP_TRANSPORT=stdio

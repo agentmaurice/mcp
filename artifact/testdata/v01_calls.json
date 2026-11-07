@@ -1,0 +1,19 @@
+[
+  {"name": "render-markdown-pdf", "tool": "artifact_render_v1", "args": {"format": "markdown", "content": "# Hello", "output_format": "pdf"}},
+  {"name": "render-html-pdf", "tool": "artifact_render_v1", "args": {"format": "html", "content": "<h1>Title</h1><p>Body (with) parens</p>", "output_format": "pdf"}},
+  {"name": "render-bad-output", "tool": "artifact_render_v1", "args": {"format": "markdown", "content": "x", "output_format": "png"}},
+  {"name": "render-bad-format", "tool": "artifact_render_v1", "args": {"format": "csv", "content": "x", "output_format": "pdf"}},
+  {"name": "create-markdown", "tool": "artifact_create_v1", "args": {"format": "markdown", "content": "# Doc"}},
+  {"name": "create-html", "tool": "artifact_create_v1", "args": {"format": "html", "content": "<p>x</p>"}},
+  {"name": "create-json", "tool": "artifact_create_v1", "args": {"format": "json", "content": {"a": 1, "b": [true, null]}}},
+  {"name": "create-csv", "tool": "artifact_create_v1", "args": {"format": "csv", "content": [{"b": "2", "a": "1"}, {"a": "3"}]}},
+  {"name": "create-pdf", "tool": "artifact_create_v1", "args": {"format": "pdf", "content": "<b>Hi</b> there"}},
+  {"name": "create-unsupported", "tool": "artifact_create_v1", "args": {"format": "docx", "content": "x"}},
+  {"name": "patch-markdown", "tool": "artifact_patch_v1", "args": {"format": "markdown", "content": "a b", "patches": [{"op": "replace", "find": "a", "value": "z"}, {"op": "append", "value": "!"}, {"op": "prepend", "value": ">"}]}},
+  {"name": "patch-invalid-json", "tool": "artifact_patch_v1", "args": {"format": "json", "content": "{}", "patches": [{"op": "append", "value": "x"}]}},
+  {"name": "patch-bad-op", "tool": "artifact_patch_v1", "args": {"format": "markdown", "content": "a", "patches": [{"op": "delete", "value": "x"}]}},
+  {"name": "inspect-json", "tool": "artifact_inspect_v1", "args": {"format": "json", "content_base64": "eyJhIjoxfQ=="}},
+  {"name": "inspect-bad-pdf", "tool": "artifact_inspect_v1", "args": {"format": "pdf", "content_base64": "aGVsbG8="}},
+  {"name": "inspect-bad-base64", "tool": "artifact_inspect_v1", "args": {"format": "json", "content_base64": "***"}},
+  {"name": "inspect-unsupported", "tool": "artifact_inspect_v1", "args": {"format": "docx", "content_base64": "eA=="}}
+]

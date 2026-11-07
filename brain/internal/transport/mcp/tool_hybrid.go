@@ -26,17 +26,18 @@ func (t *HybridTool) Name() string { return "brain.hybrid" }
 func (t *HybridTool) Definition() mcplib.Tool {
 	return mcplib.Tool{
 		Name:        "brain.hybrid",
-		Description: "Combined BM25 + vector search with configurable weighting. Best for mixed technical and conceptual queries.",
+		Description: "Combined BM25 + vector search with configurable weighting. Best for mixed technical and conceptual queries. Verbatim identifiers from the query rank first. Use response_format=concise for a compact result list.",
 		InputSchema: mcplib.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]interface{}{
-				"query":       map[string]interface{}{"type": "string", "description": "Search query"},
-				"alpha":       map[string]interface{}{"type": "number", "description": "Weight: 0.0=full BM25, 1.0=full vector (default 0.6)"},
-				"max_results": map[string]interface{}{"type": "integer", "description": "Maximum results (default 20)"},
-				"doc_types":   map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
-				"languages":   map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
-				"source_ids":  map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
-				"tenant_id":   map[string]interface{}{"type": "string"},
+				"query":           map[string]interface{}{"type": "string", "description": "Search query"},
+				"alpha":           map[string]interface{}{"type": "number", "description": "Weight: 0.0=full BM25, 1.0=full vector (default 0.6)"},
+				"max_results":     map[string]interface{}{"type": "integer", "description": "Maximum results (default 20)"},
+				"doc_types":       map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+				"languages":       map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+				"source_ids":      map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+				"tenant_id":       map[string]interface{}{"type": "string"},
+				"response_format": responseFormatProperty,
 			},
 			Required: []string{"query"},
 		},
@@ -54,8 +55,13 @@ func (t *HybridTool) Handler() ToolHandler {
 			Languages  []string `json:"languages"`
 			SourceIDs  []string `json:"source_ids"`
 			TenantID   string   `json:"tenant_id"`
+			Format     string   `json:"response_format"`
 		}
 		if err := parseArgs(request.Params.Arguments, &args); err != nil {
+			return errorResult(err.Error()), nil
+		}
+		format, err := parseResponseFormat(args.Format)
+		if err != nil {
 			return errorResult(err.Error()), nil
 		}
 
@@ -76,6 +82,9 @@ func (t *HybridTool) Handler() ToolHandler {
 			return errorResult(err.Error()), nil
 		}
 
+		if format == responseFormatConcise {
+			return t.wrapper.Wrap(buildConciseSearchResponse(result)), nil
+		}
 		return t.wrapper.Wrap(result), nil
 	}
 }

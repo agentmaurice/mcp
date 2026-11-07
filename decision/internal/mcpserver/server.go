@@ -9,8 +9,10 @@ import (
 	"net/http"
 
 	"github.com/agentmaurice/mcpchatui/mcp/decision/pkg/systemone"
+	"github.com/agentmaurice/mcpchatui/mcp/decision/telemetry"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 type Evaluator interface {
@@ -45,7 +47,11 @@ func result(v any, err error) (*mcp.CallToolResult, error) {
 }
 
 func New(client Evaluator, version string) *server.MCPServer {
-	s := server.NewMCPServer("decision", version, server.WithInstructions("Classify, score or evaluate a yes/no question over short, already extracted content. This server returns typed values and never executes a branch or write. Use min_confidence for consequential choices; uncertain means do not act automatically. Confidence calibration must be checked on your own labelled data."))
+	s := server.NewMCPServer("decision", version,
+		server.WithInstructions("Classify, score or evaluate a yes/no question over short, already extracted content. This server returns typed values and never executes a branch or write. Use min_confidence for consequential choices; uncertain means do not act automatically. Confidence calibration must be checked on your own labelled data."),
+		server.WithTracer(telemetry.TracerAdapter()),
+		server.WithMetaPropagator(telemetry.MetaPropagator{}),
+	)
 	add := func(name, description string, schema map[string]any, fn func(context.Context, json.RawMessage) (any, error)) {
 		no := false
 		readOnly := true
@@ -123,6 +129,10 @@ func Handler(s *server.MCPServer) http.Handler {
 		})
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// HTTP MCP clients propagate trace context in headers; extract it before
+		// mcp-go creates the server span. Baggage remains local to this process.
+		ctx := propagation.TraceContext{}.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+		r = r.WithContext(ctx)
 		r.Body = http.MaxBytesReader(w, r.Body, 4*1024*1024)
 		mux.ServeHTTP(w, r)
 	})

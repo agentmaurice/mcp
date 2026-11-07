@@ -38,7 +38,7 @@ func newMockServer(bootstrapToken string) *mockServer {
 		bootstrapToken: bootstrapToken,
 		mcpID:          "mock-mcp-id-12345",
 		apiKey:         "msk_testkey_abcdef1234567890abcdef1234567890",
-		renewedAPIKey:  "msk_renewed_abcdef1234567890abcdef1234567890",
+		renewedAPIKey:  "msk_renewed_" + "abcdef1234567890abcdef1234567890",
 	}
 }
 

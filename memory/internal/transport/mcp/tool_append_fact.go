@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/config"
+	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/logging"
 	"github.com/agentmaurice/mcpchatui/mcp/memory/internal/storage"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/rs/xid"
@@ -79,7 +80,8 @@ func (t *AppendFactTool) Definition() mcp.Tool {
 
 func (t *AppendFactTool) Handler() ToolHandler {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		t.logger.Info("tool called", zap.Any("arguments", request.Params.Arguments))
+		t.logger.Info("tool called", zap.String("tool", t.Name()), logging.SizeOf("arguments", request.Params.Arguments))
+		logging.DebugValue(t.logger, "tool arguments", "arguments", request.Params.Arguments, zap.String("tool", t.Name()))
 
 		var args struct {
 			TenantID string `json:"tenant_id"`
@@ -96,39 +98,40 @@ func (t *AppendFactTool) Handler() ToolHandler {
 			Writer       WriterInput    `json:"writer"`
 		}
 		if err := parseArgs(request.Params.Arguments, &args); err != nil {
-			t.logger.Warn("failed to parse arguments", zap.Error(err), zap.Any("raw_arguments", request.Params.Arguments))
+			t.logger.Warn("failed to parse arguments", zap.String("tool", t.Name()), logging.ErrorClass(err), logging.SizeOf("raw_arguments", request.Params.Arguments))
+			logging.DebugValue(t.logger, "unparsed arguments", "raw_arguments", request.Params.Arguments, zap.String("tool", t.Name()))
 			return errorResult("failed to parse arguments"), nil
 		}
 
 		t.logger.Debug("parsed arguments",
-			zap.String("fact_type", args.FactType),
-			zap.String("effective_at", args.EffectiveAt),
-			zap.Any("subject", args.Subject),
-			zap.String("dedupe_key", args.DedupeKey),
+			logging.Text("fact_type", args.FactType),
+			logging.Text("effective_at", args.EffectiveAt),
+			logging.SizeOf("subject", args.Subject),
+			logging.Text("dedupe_key", args.DedupeKey),
 		)
 
 		if args.FactType == "" || args.EffectiveAt == "" {
-			t.logger.Warn("missing required fields", zap.String("fact_type", args.FactType), zap.String("effective_at", args.EffectiveAt))
+			t.logger.Warn("missing required fields", logging.Text("fact_type", args.FactType), logging.Text("effective_at", args.EffectiveAt))
 			return errorResult("factType and effectiveAt are required"), nil
 		}
 		if args.Source.System == "" || args.Source.Timestamp == "" {
-			t.logger.Warn("missing source fields", zap.String("system", args.Source.System), zap.String("timestamp", args.Source.Timestamp))
+			t.logger.Warn("missing source fields", logging.Text("system", args.Source.System), logging.Text("timestamp", args.Source.Timestamp))
 			return errorResult("source.system and source.timestamp are required"), nil
 		}
 		if args.Writer.AppID == "" || args.Writer.ActorID == "" {
-			t.logger.Warn("missing writer fields", zap.String("app_id", args.Writer.AppID), zap.String("actor_id", args.Writer.ActorID))
+			t.logger.Warn("missing writer fields", logging.Text("app_id", args.Writer.AppID), logging.Text("actor_id", args.Writer.ActorID))
 			return errorResult("writer.appId and writer.actorId are required"), nil
 		}
 
 		effectiveAt, err := time.Parse(time.RFC3339, args.EffectiveAt)
 		if err != nil {
-			t.logger.Warn("invalid effectiveAt format", zap.String("effective_at", args.EffectiveAt), zap.Error(err))
+			t.logger.Warn("invalid effectiveAt format", logging.Text("effective_at", args.EffectiveAt), logging.ErrorClass(err))
 			return errorResult("invalid effectiveAt"), nil
 		}
 
 		tenantID, err := resolveTenantID(ctx, t.cfg, args.TenantID, request.Params.Arguments)
 		if err != nil {
-			t.logger.Warn("failed to resolve tenant ID", zap.Error(err))
+			t.logger.Warn("failed to resolve tenant ID", logging.ErrorClass(err))
 			return errorResult(err.Error()), nil
 		}
 
@@ -198,8 +201,8 @@ func (t *AppendFactTool) Handler() ToolHandler {
 		})
 		if err != nil {
 			t.logger.Error("failed to append fact",
-				zap.Error(err),
-				zap.String("fact_type", args.FactType),
+				logging.ErrorClass(err),
+				logging.Text("fact_type", args.FactType),
 				zap.String("tenant_id", tenantID),
 			)
 			return errorResult(err.Error()), nil
@@ -207,7 +210,7 @@ func (t *AppendFactTool) Handler() ToolHandler {
 
 		t.logger.Info("fact appended successfully",
 			zap.String("fact_id", factID),
-			zap.String("fact_type", args.FactType),
+			logging.Text("fact_type", args.FactType),
 			zap.Bool("deduped", deduped),
 		)
 

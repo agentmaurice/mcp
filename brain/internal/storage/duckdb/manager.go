@@ -5,12 +5,14 @@ package duckdb
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
-	_ "github.com/marcboeker/go-duckdb/v2"
+	godb "github.com/duckdb/duckdb-go/v2"
 	"go.uber.org/zap"
 
 	"github.com/agentmaurice/mcpchatui/mcp/brain/internal/config"
@@ -35,15 +37,54 @@ type Manager struct {
 	logger  *zap.Logger
 	mu      sync.Mutex
 	tenants map[string]*tenantDB
+	fts     ftsTracker
+	// connSettings run on every new connection, before any LOAD or INSTALL.
+	connSettings []string
 }
 
 // NewManager creates a new DuckDB manager.
 func NewManager(cfg config.StorageConfig, logger *zap.Logger) *Manager {
 	return &Manager{
-		cfg:     cfg,
-		logger:  logger.Named("duckdb"),
-		tenants: make(map[string]*tenantDB),
+		cfg:          cfg,
+		logger:       logger.Named("duckdb"),
+		tenants:      make(map[string]*tenantDB),
+		connSettings: connectionSettings(cfg),
 	}
+}
+
+// lambdaSyntaxSetting makes DuckDB reject the single-arrow lambda (x -> ...) that
+// DuckDB 2.0 disables by default and 2.1 removes. Brain's SQL only uses the
+// "lambda x: ..." form, so a regression fails in every test on 1.4 as it would in 2.0.
+const lambdaSyntaxSetting = "SET lambda_syntax = 'DISABLE_SINGLE_ARROW'"
+
+// connectionSettings returns the SQL statements applied to every new DuckDB
+// connection: the lambda syntax and, when configured, the extension directory
+// (empty config keeps DuckDB's default location).
+// DuckDB 2.0 deprecates the singular extension_directory for the list setting
+// extension_directories; the first entry is where INSTALL writes.
+func connectionSettings(cfg config.StorageConfig) []string {
+	settings := []string{lambdaSyntaxSetting}
+	if cfg.DuckDBExtensionDir != "" {
+		settings = append(settings, "SET extension_directories = ['"+strings.ReplaceAll(cfg.DuckDBExtensionDir, "'", "''")+"']")
+	}
+	return settings
+}
+
+// openDuckDB opens a DuckDB database at path, applying settings on each new
+// connection. The settings run before any statement of the caller.
+func openDuckDB(path string, settings []string) (*sql.DB, error) {
+	connector, err := godb.NewConnector(path, func(execer driver.ExecerContext) error {
+		for _, stmt := range settings {
+			if _, err := execer.ExecContext(context.Background(), stmt, nil); err != nil {
+				return fmt.Errorf("apply %q: %w", stmt, err)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return sql.OpenDB(connector), nil
 }
 
 // Close closes all tenant databases.
@@ -142,6 +183,22 @@ func (m *Manager) ensureTenant(ctx context.Context, tenantID string) (*tenantDB,
 		return nil, fmt.Errorf("failed to create tenant directory: %w", err)
 	}
 
+	// A file written by DuckDB 1.x cannot be read by a 1.x image once 2.x has opened it.
+	taken, err := backupBeforeUpgrade(path)
+	if err != nil {
+		return nil, fmt.Errorf("tenant %s: %w", tenantID, err)
+	}
+	opened := false
+	if taken {
+		m.logger.Info("tenant database backed up before the DuckDB 2 upgrade",
+			zap.String("tenant", tenantID), zap.String("backup", path+PreUpgradeBackupSuffix))
+		defer func() {
+			if !opened {
+				discardBackupIfUnchanged(path)
+			}
+		}()
+	}
+
 	db, err := m.openDB(ctx, path)
 	if err != nil {
 		// Attempt WAL recovery
@@ -170,6 +227,7 @@ func (m *Manager) ensureTenant(ctx context.Context, tenantID string) (*tenantDB,
 	writeCh := make(chan writeRequest, m.cfg.WriteQueueSize)
 	td := &tenantDB{db: db, path: path, writeCh: writeCh}
 	m.tenants[tenantID] = td
+	opened = true
 
 	go m.writerLoop(tenantID, td)
 
@@ -177,7 +235,7 @@ func (m *Manager) ensureTenant(ctx context.Context, tenantID string) (*tenantDB,
 }
 
 func (m *Manager) openDB(ctx context.Context, path string) (*sql.DB, error) {
-	db, err := sql.Open("duckdb", path)
+	db, err := openDuckDB(path, m.connSettings)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open duckdb: %w", err)
 	}

@@ -12,8 +12,15 @@ import (
 	"time"
 
 	"github.com/agentmaurice/mcpchatui/mcp/decision/pkg/systemone"
+	"github.com/agentmaurice/mcpchatui/mcp/decision/telemetry"
 	"github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestHTTPTransportsAndTools(t *testing.T) {
@@ -170,6 +177,91 @@ func TestDecodeStrictObject(t *testing.T) {
 		if decode([]byte(b), &v) == nil {
 			t.Fatalf("accepted %s", b)
 		}
+	}
+}
+
+func TestHTTPClientTraceparentReachesServerAndProvider(t *testing.T) {
+	var providerTraceparent, providerTracestate string
+	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		providerTraceparent = r.Header.Get("traceparent")
+		providerTracestate = r.Header.Get("tracestate")
+		_ = json.NewEncoder(w).Encode(map[string]any{"model": "jev-latest", "answers": map[string]any{
+			"answer": map[string]any{"type": "noul", "noul": 0.9},
+		}, "usage": map[string]int{}})
+	}))
+	defer provider.Close()
+	evaluator, err := systemone.New(systemone.Config{APIKey: "secret", URL: provider.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"OTEL_SDK_DISABLED", "OTEL_EXPORTER", "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL", "OTEL_EXPORTER_OTLP_PROTOCOL"} {
+		t.Setenv(key, "")
+	}
+	previousPropagator := otel.GetTextMapPropagator()
+	defer otel.SetTextMapPropagator(previousPropagator)
+	shutdown, err := telemetry.Init(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = shutdown(context.Background()) }()
+	recorder := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	previous := otel.GetTracerProvider()
+	otel.SetTracerProvider(tracerProvider)
+	defer func() { otel.SetTracerProvider(previous); _ = tracerProvider.Shutdown(context.Background()) }()
+	state, err := trace.ParseTraceState("vendor=qualification")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := trace.NewSpanContext(trace.SpanContextConfig{TraceID: [16]byte{21, 22, 23}, SpanID: [8]byte{24, 25, 26}, TraceFlags: trace.FlagsSampled, TraceState: state})
+	carrier := propagation.MapCarrier{}
+	propagation.TraceContext{}.Inject(trace.ContextWithSpanContext(context.Background(), root), carrier)
+	srv := httptest.NewServer(Handler(New(evaluator, "test")))
+	defer srv.Close()
+	session, err := client.NewStreamableHttpClient(srv.URL+"/mcp", transport.WithHTTPHeaderFunc(func(context.Context) map[string]string {
+		return map[string]string{"traceparent": carrier.Get("traceparent"), "tracestate": carrier.Get("tracestate")}
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err = session.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	if _, err = session.Initialize(ctx, mcp.InitializeRequest{Params: mcp.InitializeParams{ProtocolVersion: mcp.LATEST_PROTOCOL_VERSION, Capabilities: mcp.ClientCapabilities{}, ClientInfo: mcp.Implementation{Name: "trace-test", Version: "1"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = session.CallTool(ctx, mcp.CallToolRequest{Params: mcp.CallToolParams{Name: "decision_noul_v1", Arguments: map[string]any{"state": "synthetic", "instructions": "Is this synthetic?"}}}); err != nil {
+		t.Fatal(err)
+	}
+	providerContext := propagation.TraceContext{}.Extract(context.Background(), propagation.HeaderCarrier(http.Header{"Traceparent": []string{providerTraceparent}}))
+	providerSC := trace.SpanContextFromContext(providerContext)
+	if !providerSC.IsValid() || providerSC.TraceID() != root.TraceID() {
+		t.Fatalf("provider lost incoming traceparent: %q", providerTraceparent)
+	}
+	if providerTracestate != "vendor=qualification" {
+		t.Fatalf("provider lost tracestate: %q", providerTracestate)
+	}
+	foundProvider := false
+	foundRootChild := false
+	for _, span := range recorder.Ended() {
+		if span.Parent().SpanID() == root.SpanID() {
+			foundRootChild = true
+		}
+		if span.Name() == "provider.http.request" {
+			foundProvider = true
+			if span.Parent().TraceID() != root.TraceID() || !span.Parent().SpanID().IsValid() {
+				t.Fatalf("provider span parent mismatch: %v", span.Parent())
+			}
+		}
+	}
+	if !foundProvider {
+		t.Fatal("provider span was not recorded")
+	}
+	if !foundRootChild {
+		t.Fatal("no span descended from incoming root span")
 	}
 }
 
