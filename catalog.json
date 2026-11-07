@@ -1,6 +1,6 @@
 {
   "schema_version": "agentmaurice.mcp-catalog/v1",
-  "generated_at": "2026-11-07T10:56:07Z",
+  "generated_at": "2026-11-07T11:42:40Z",
   "repository": "https://github.com/agentmaurice/mcp",
   "registry": "ghcr.io/agentmaurice/mcp",
   "servers": [
@@ -76,7 +76,7 @@
         },
         {
           "name": "artifact_capabilities_v1",
-          "description": "Describe supported formats, renderer and limits"
+          "description": "Describe supported formats, rendering engines (typst 0.15.1, html), template contract and limits"
         },
         {
           "name": "artifact_create_v1",
@@ -88,7 +88,7 @@
         },
         {
           "name": "artifact_render_v1",
-          "description": "Render an artifact to a deterministic preview"
+          "description": "Render a template/v1 folder with data to a deterministic PDF, PNG, HTML or text, with page previews and provenance (the v0.1 call still works)"
         },
         {
           "name": "artifact_inspect_v1",
@@ -100,6 +100,10 @@
         "document",
         "render",
         "pdf",
+        "png",
+        "html",
+        "typst",
+        "template",
         "export"
       ]
     },
@@ -111,7 +115,7 @@
       "description": "Go MCP server that indexes an organization's knowledge (code, documentation, configuration) and retrieves the relevant context for AgentMaurice agents. It combines BM25 full-text search, vector search, a knowledge graph and hybrid fusion, with AST-aware chunking for code. Brain returns results, not generated answers: an agent uses it to locate context, and can then hand that context to MCP RAG for a reasoned answer.",
       "sidecar_compatible": true,
       "one_compatible": true,
-      "one_notes": "Tool inventory is absent from this metadata; discover runtime tools after installation.",
+      "one_notes": null,
       "requires": [],
       "install_image": "ghcr.io/agentmaurice/mcp/brain-sidecar:v1.3.1@sha256:7616a87e90fec430fce13a25c7880df9fc63de369436dcdbdc8977385551c9f3",
       "images": [
@@ -127,8 +131,68 @@
           "digest": "sha256:7616a87e90fec430fce13a25c7880df9fc63de369436dcdbdc8977385551c9f3"
         }
       ],
-      "tools": [],
-      "tags": []
+      "tools": [
+        {
+          "name": "brain.health",
+          "description": "Health check for the Brain server"
+        },
+        {
+          "name": "brain.stats",
+          "description": "Get storage and indexation statistics for the tenant."
+        },
+        {
+          "name": "brain.sources",
+          "description": "List all indexed sources with their status and statistics."
+        },
+        {
+          "name": "brain.schema",
+          "description": "Describe the indexed content schema: document types, languages, chunk types, and sources present."
+        },
+        {
+          "name": "brain.index",
+          "description": "Index a data source. Launches indexation in the background and returns a job ID for tracking."
+        },
+        {
+          "name": "brain.document.upsert",
+          "description": "Create or update one textual document from inline content or an opaque authenticated buffer reference. Use this instead of brain.index when the producer is another MCP tool."
+        },
+        {
+          "name": "brain.index.status",
+          "description": "Check the status of indexation jobs."
+        },
+        {
+          "name": "brain.search",
+          "description": "Intelligent search across indexed codebases and documentation. Automatically selects the best search mode (keyword, semantic, or hybrid) based on the query. response_format=detailed (default) returns the compact list; concise returns URI, title, chunk id, score and a short snippet per result."
+        },
+        {
+          "name": "brain.timeline",
+          "description": "Fetch nearby chunks around one or more search hits, grouped by document. Use after brain.search to add local context without loading full content."
+        },
+        {
+          "name": "brain.get",
+          "description": "Fetch exact details for chunk or document IDs discovered via brain.search or brain.timeline."
+        },
+        {
+          "name": "brain.keyword",
+          "description": "BM25 full-text keyword search over indexed chunks (DuckDB FTS). Identifiers in the query (AGENT-530, MEM-G3, 2026.10.19-3015, calcul_taux_marge) are matched verbatim and listed first. Use response_format=concise for URI, title, chunk id, score and a short snippet per result."
+        },
+        {
+          "name": "brain.semantic",
+          "description": "Semantic vector search using embeddings. Best for natural language questions and conceptual queries."
+        },
+        {
+          "name": "brain.hybrid",
+          "description": "Combined BM25 + vector search with configurable weighting. Best for mixed technical and conceptual queries. Verbatim identifiers from the query rank first. Use response_format=concise for a compact result list."
+        }
+      ],
+      "tags": [
+        "brain",
+        "search",
+        "rag",
+        "documents",
+        "bm25",
+        "semantic"
+      ]
     },
     {
       "slug": "browser",
@@ -352,7 +416,7 @@
       "description": "MCP server providing a multi-tenant, read-safe SQL memory backed by DuckDB or PostgreSQL. Writes are handled by strict ingestion tools (no arbitrary SQL writes).",
       "sidecar_compatible": true,
       "one_compatible": true,
-      "one_notes": "Tool inventory is absent from this metadata; discover runtime tools after installation.",
+      "one_notes": null,
       "requires": [],
       "install_image": "ghcr.io/agentmaurice/mcp/memory-sidecar:v1.2.3@sha256:22f9ccfe224f12ad15b00d26347992069d810c1492ed6c6fdc0774b124f5e6a8",
       "images": [
@@ -375,8 +439,72 @@
           "digest": "sha256:22f9ccfe224f12ad15b00d26347992069d810c1492ed6c6fdc0774b124f5e6a8"
         }
       ],
-      "tools": [],
-      "tags": []
+      "tools": [
+        {
+          "name": "memory.query",
+          "description": "Run a read-only guarded query over memory tables. Results are capped; an empty tenant is reported as tenant_empty with a warning."
+        },
+        {
+          "name": "memory.schema.describe",
+          "description": "Describe tables and views and their columns"
+        },
+        {
+          "name": "memory.preview",
+          "description": "Preview a table or view with optional filters"
+        },
+        {
+          "name": "memory.entities.upsert",
+          "description": "Upsert generic entities with provenance"
+        },
+        {
+          "name": "memory.facts.append",
+          "description": "Append a business fact/event (append-only)"
+        },
+        {
+          "name": "memory.documents.register",
+          "description": "Register an external document with metadata"
+        },
+        {
+          "name": "memory.private_ingest",
+          "description": "Sanitize a fact, entity, or document payload before persistence, then store an ingest receipt."
+        },
+        {
+          "name": "memory.links.upsert",
+          "description": "Upsert generic links between entities, facts, and documents"
+        },
+        {
+          "name": "memory.views.create_or_replace",
+          "description": "Create or replace an app-scoped view (app_{appId}__*)"
+        },
+        {
+          "name": "memory.indexes.ensure",
+          "description": "Ensure indexes for app-scoped objects (whitelisted)"
+        },
+        {
+          "name": "memory.observations.search",
+          "description": "Search derived observation facts (`observation.*`) through the v_observations view."
+        },
+        {
+          "name": "memory.capabilities",
+          "description": "Describe backend capabilities and supported operations"
+        },
+        {
+          "name": "memory.health",
+          "description": "Health check"
+        },
+        {
+          "name": "memory.stats",
+          "description": "Return database stats"
+        }
+      ],
+      "tags": [
+        "memory",
+        "query",
+        "entities",
+        "facts",
+        "documents",
+        "views"
+      ]
     },
     {
       "slug": "observe",
@@ -417,6 +545,10 @@
         {
           "name": "observe_compare_v1",
           "description": "Compare two run traces"
+        },
+        {
+          "name": "observe_query_v1",
+          "description": "Compute bounded cohort metrics from redacted execution diagnostics"
         }
       ],
       "tags": [
