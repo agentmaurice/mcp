@@ -681,6 +681,7 @@ func (h *handlers) postGet(ctx context.Context, request mcp.CallToolRequest) (*m
 	ids := h.groups[in.PostID]
 	known, hasWhen := h.when[in.PostID]
 	lost := h.missing[in.PostID]
+	_, knownPost := h.chanOf[in.PostID] // confirmed by this process: absence from the list proves nothing
 	h.mu.Unlock()
 	if len(ids) == 0 {
 		ids = []string{in.PostID}
@@ -725,7 +726,7 @@ func (h *handlers) postGet(ctx context.Context, request mcp.CallToolRequest) (*m
 	// Channels whose creation was not confirmed: "unknown", never "missing" (nothing
 	// proves they were not created). Postiz's list has no group field, so a post on
 	// that channel with the planned date of this group is reported as inferred.
-	if len(chans) > 0 {
+	if len(chans) > 0 || knownPost {
 		for _, ch := range lost {
 			entry := map[string]any{"id": ch, "state": "unknown"}
 			if hasWhen {
@@ -755,7 +756,7 @@ func (h *handlers) postGet(ctx context.Context, request mcp.CallToolRequest) (*m
 		}
 	}
 	// Known siblings absent from the list: that channel is unknown, not absent.
-	if len(chans) > 0 {
+	if len(chans) > 0 || knownPost {
 		seen := map[string]bool{}
 		for _, p := range posts {
 			seen[p.ID] = true

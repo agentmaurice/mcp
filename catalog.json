@@ -1,6 +1,6 @@
 {
   "schema_version": "agentmaurice.mcp-catalog/v1",
-  "generated_at": "2026-11-08T08:15:19Z",
+  "generated_at": "2026-11-08T18:57:11Z",
   "repository": "https://github.com/agentmaurice/mcp",
   "registry": "ghcr.io/agentmaurice/mcp",
   "servers": [
@@ -53,20 +53,20 @@
     {
       "slug": "artifact",
       "kind": "server",
-      "version": "v0.2.1",
-      "commit": "4cb878c8c94ce20083404cb4aad789f6df802a49",
+      "version": "v0.2.2",
+      "commit": "672453dee472fd334e2a305e02740c4f0af18984",
       "description": "Go MCP server for creating, patching, rendering and inspecting deterministic deliverables. Every result carries a provenance manifest with format, MIME type, size, renderer and SHA-256. Version 0.2.0 adds the rendering engine of Document studio: it renders `template/v1` folders to PDF, PNG, HTML or text.",
       "sidecar_compatible": true,
       "one_compatible": true,
       "one_notes": null,
       "requires": [],
-      "install_image": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.2.1@sha256:d1908504a4ae46c6098cb310ba85a8252d59ae681715a2a230e7f3e279401753",
+      "install_image": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.2.2@sha256:338432503cc6e8e246f6ee5cc6a0aadcbf50cdc39e75abe1dcf8229cca9b52f7",
       "images": [
         {
           "name": "artifact-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.2.1@sha256:d1908504a4ae46c6098cb310ba85a8252d59ae681715a2a230e7f3e279401753",
+          "ref": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.2.2@sha256:338432503cc6e8e246f6ee5cc6a0aadcbf50cdc39e75abe1dcf8229cca9b52f7",
           "role": "sidecar",
-          "digest": "sha256:d1908504a4ae46c6098cb310ba85a8252d59ae681715a2a230e7f3e279401753"
+          "digest": "sha256:338432503cc6e8e246f6ee5cc6a0aadcbf50cdc39e75abe1dcf8229cca9b52f7"
         }
       ],
       "tools": [
@@ -232,6 +232,21 @@
           "digest": "sha256:bc4e6c659f4f09b733f901a32a9eeada396c2449073272503ce754de85fedcf7"
         }
       ],
+      "tools": [],
+      "tags": []
+    },
+    {
+      "slug": "cms",
+      "kind": "server",
+      "version": null,
+      "commit": "6f21831e47d93c0b85bc05dafdab9a02994b5215",
+      "description": "",
+      "sidecar_compatible": false,
+      "one_compatible": false,
+      "one_notes": "Tool inventory is absent from this metadata; discover runtime tools after installation.",
+      "requires": [],
+      "install_image": null,
+      "images": [],
       "tools": [],
       "tags": []
     },
@@ -597,8 +612,8 @@
     {
       "slug": "office",
       "kind": "server",
-      "version": "v0.1.0",
-      "commit": "63d7b71b5b9f0b9286f949cb2e0755328924a691",
+      "version": "v0.1.1",
+      "commit": "f2683d5ca8655e6162a1ebe83e7c04daabc1c1f1",
       "description": "MCP server (Go) that creates, edits, compares and inspects Word (DOCX) and Excel (XLSX) files. It drives a document engine CLI as a separate process; the server itself never parses Office packages.",
       "sidecar_compatible": true,
       "one_compatible": false,
@@ -776,13 +791,15 @@
     {
       "slug": "social",
       "kind": "server",
-      "version": "v0.1.1",
-      "commit": "680da8cf1822710108b887448e79433de727849c",
+      "version": "v0.1.2",
+      "commit": "2b790346e42503a4de10e62333f5f984bc462aff",
       "description": "Go MCP server that drafts, schedules and publishes social posts through [Postiz](https://postiz.com). Postiz (AGPL-3.0) stays a **connected service**: either Postiz Cloud or the customer's own instance. This MCP **hosts no Postiz** and contains no Postiz code. It is only an HTTP client of Postiz's public REST API, written from the public documentation.",
       "sidecar_compatible": true,
-      "one_compatible": false,
-      "one_notes": null,
-      "requires": [],
+      "one_compatible": true,
+      "one_notes": "Needs a Postiz account (Postiz Cloud or the customer's instance): set SOCIAL_POSTIZ_URL and SOCIAL_POSTIZ_API_KEY as secret deployment variables (maurice deployment variable set NAME --secret) before deploying.",
+      "requires": [
+        "postiz-connection"
+      ],
       "install_image": null,
       "images": [],
       "tools": [
@@ -821,6 +838,10 @@
         "BUFFER_SERVICE_URL",
         "BUFFER_TOKEN",
         "BUFFER_NAMESPACE"
+      ],
+      "secret_env": [
+        "SOCIAL_POSTIZ_URL",
+        "SOCIAL_POSTIZ_API_KEY"
       ]
     },
     {

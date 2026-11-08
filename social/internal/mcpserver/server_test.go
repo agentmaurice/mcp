@@ -712,6 +712,32 @@ func TestGetMarksMissingSiblingUnknown(t *testing.T) {
 	}
 }
 
+func TestGetKnownPostAbsentFromListIsUnknown(t *testing.T) {
+	h, f, _ := setup(t, testKey, 30)
+	f.set(func() { f.partial = true }) // only p1 on ch1 is confirmed
+	m, e := call(t, h.guard(h.postCreate), base())
+	wantErr(t, m, e, "partial_failure")
+	// Postiz now lists only p2 (ch2): p1 vanished from the list.
+	f.set(func() {
+		p2 := postiz.Post{ID: "p2", State: "PUBLISHED", PublishDate: f.posts[0].PublishDate}
+		p2.Integration.ID = "ch2"
+		f.posts = []postiz.Post{p2}
+	})
+	g, e := call(t, h.guard(h.postGet), map[string]any{"post_id": m["post_id"]})
+	if e || g["state"] != "unknown" {
+		t.Fatalf("a known post absent from the list must be unknown, not missing: %v", g)
+	}
+	found := false
+	for _, c := range g["channels"].([]map[string]any) {
+		if c["id"] == "ch1" && c["state"] == "unknown" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal(g)
+	}
+}
+
 func TestPartialCreationNeverReadAsPublished(t *testing.T) {
 	h, f, _ := setup(t, testKey, 30)
 	f.set(func() { f.partial = true }) // Postiz returns only p for ch1
