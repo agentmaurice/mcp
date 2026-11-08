@@ -1,6 +1,6 @@
 {
   "schema_version": "agentmaurice.mcp-catalog/v1",
-  "generated_at": "2026-11-08T18:57:11Z",
+  "generated_at": "2026-11-08T19:07:33Z",
   "repository": "https://github.com/agentmaurice/mcp",
   "registry": "ghcr.io/agentmaurice/mcp",
   "servers": [
@@ -616,11 +616,18 @@
       "commit": "f2683d5ca8655e6162a1ebe83e7c04daabc1c1f1",
       "description": "MCP server (Go) that creates, edits, compares and inspects Word (DOCX) and Excel (XLSX) files. It drives a document engine CLI as a separate process; the server itself never parses Office packages.",
       "sidecar_compatible": true,
-      "one_compatible": false,
-      "one_notes": null,
+      "one_compatible": true,
+      "one_notes": "Creates, edits, compares and inspects DOCX and XLSX files; reads and writes them through the One Storage and Buffer.",
       "requires": [],
-      "install_image": null,
-      "images": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/office-sidecar:v0.1.1@sha256:23550e08fed212de065fb5f575da1cbe7d39b9754d697d349e1ce330d458fcfe",
+      "images": [
+        {
+          "name": "office-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/office-sidecar:v0.1.1@sha256:23550e08fed212de065fb5f575da1cbe7d39b9754d697d349e1ce330d458fcfe",
+          "role": "sidecar",
+          "digest": "sha256:23550e08fed212de065fb5f575da1cbe7d39b9754d697d349e1ce330d458fcfe"
+        }
+      ],
       "tools": [
         {
           "name": "office_health_v1",
@@ -800,8 +807,15 @@
       "requires": [
         "postiz-connection"
       ],
-      "install_image": null,
-      "images": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/social-sidecar:v0.1.2@sha256:9fa361d73afaeff20301f5d183499b51766c56ec85abb84fdf4af7797987c38c",
+      "images": [
+        {
+          "name": "social-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/social-sidecar:v0.1.2@sha256:9fa361d73afaeff20301f5d183499b51766c56ec85abb84fdf4af7797987c38c",
+          "role": "sidecar",
+          "digest": "sha256:9fa361d73afaeff20301f5d183499b51766c56ec85abb84fdf4af7797987c38c"
+        }
+      ],
       "tools": [
         {
           "name": "social_health_v1",
