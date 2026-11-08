@@ -1,0 +1,4 @@
+/bin/
+/office
+/.env
+*.log

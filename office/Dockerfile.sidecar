@@ -1,0 +1,82 @@
+# SIDECAR_IMAGE: mcp-sidecar base image (declared before the first FROM to be usable in one).
+ARG SIDECAR_IMAGE
+
+# Engine sources: the Apache-2.0 GenOffice CLI is built from the sources of a
+# tag; the checked-out commit must match the pinned one (the tag is not trusted).
+FROM node:22.21.1-bookworm@sha256:b84d52cd45bfe261096ccbf886955d431b8b9ed01b72eaef588e8886bda09e78 AS engine-src
+ARG ENGINE_TAG=v0.12.852
+ARG ENGINE_COMMIT=4b55db9ed1994575a695160ffc6cfd0bfc866211
+RUN git clone --quiet --depth 1 --branch "${ENGINE_TAG}" https://github.com/genspark-ai/genoffice.git /engine \
+    && test "$(git -C /engine rev-parse HEAD)" = "${ENGINE_COMMIT}"
+WORKDIR /engine
+RUN npm ci --ignore-scripts --no-audit --no-fund \
+    && npm run build -w @genoffice/cli \
+    && mkdir -p /out/cli /out/doc /out/wasm \
+    && cp -a packages/cli/dist/. /out/cli/ \
+    && cp node_modules/@embedpdf/pdfium/dist/pdfium.wasm /out/wasm/ \
+    && cp LICENSE NOTICE LICENSE-UNICODE.txt /out/doc/ \
+    && cp node_modules/@embedpdf/pdfium/LICENSE /out/doc/LICENSE.embedpdf-pdfium \
+    && cp node_modules/@embedpdf/pdfium/LICENSE.pdfium /out/doc/LICENSE.pdfium
+
+# The CLI finds jsdom and the PDF module through its "packaged" layout:
+# <root>/cli/genoffice.cjs next to <root>/cli/node_modules and <root>/wasm/pdfium.wasm.
+
+# Workbook helper (Rust), built from the same sources.
+FROM rust:1.93-bookworm@sha256:7c4ae649a84014c467d79319bbf17ce2632ae8b8be123ac2fb2ea5be46823f31 AS xlsx-sidecar
+COPY --from=engine-src /engine/apps/sheets/native/xlsx-engine /xlsx-engine
+WORKDIR /xlsx-engine
+RUN cargo build --release --locked --config .cargo/config.toml \
+    && install -m 0755 target/release/xlsx-sidecar /out-xlsx-sidecar
+
+FROM golang:1.26.0-bookworm@sha256:2a0ba12e116687098780d3ce700f9ce3cb340783779646aafbabed748fa6677c AS builder
+
+WORKDIR /src/mcp
+COPY shared ./shared
+COPY office/go.mod office/go.sum ./office/
+WORKDIR /src/mcp/office
+RUN go mod download
+
+WORKDIR /src/mcp
+COPY office ./office
+WORKDIR /src/mcp/office
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/office ./cmd/office
+
+FROM ${SIDECAR_IMAGE} AS sidecar
+
+FROM node:22.21.1-bookworm-slim@sha256:25b3eb23a00590b7499f2a2ce939322727fcce1b15fdd69754fcd09536a3ae2c
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && userdel -r node \
+    && groupadd -g 1000 app \
+    && useradd -u 1000 -g app -m app \
+    && mkdir -p /app /var/mcp/credentials /tmp /opt/office-engine /usr/share/doc/office-engine \
+    && chown -R app:app /app /var/mcp /tmp
+
+COPY --chmod=755 --from=builder /out/office /usr/local/bin/office
+COPY --chmod=755 --from=builder /src/mcp/office/docker/run-office-stdio.sh /usr/local/bin/run-office-stdio.sh
+COPY --chmod=755 --from=builder /src/mcp/office/docker/office-engine.sh /usr/local/bin/office-engine
+COPY --from=engine-src /out/cli /opt/office-engine/cli
+COPY --from=engine-src /out/wasm /opt/office-engine/wasm
+COPY --from=engine-src /out/doc /usr/share/doc/office-engine
+COPY --chmod=755 --from=xlsx-sidecar /out-xlsx-sidecar /opt/office-engine/xlsx-sidecar
+COPY --chmod=755 --from=sidecar /usr/local/bin/mcp_sidecar /usr/local/bin/mcp-sidecar
+
+WORKDIR /app
+USER app
+
+ENV TMPDIR=/tmp
+ENV OFFICE_CLI_PATH=/usr/local/bin/office-engine
+ENV OFFICE_XLSX_SIDECAR_PATH=/opt/office-engine/xlsx-sidecar
+ENV OFFICE_ENGINE_VERSION=0.12.852
+ENV ELECTRON_SKIP_BINARY_DOWNLOAD=1
+ENV DO_NOT_TRACK=1
+ENV MCP_CREDENTIALS_PATH=/var/mcp/credentials/credentials.json
+ENV MCP_SIDECAR_CREDENTIALS_PATH=/var/mcp/credentials
+ENV MCP_SIDECAR_LOCAL_MCP_TRANSPORT=stdio
+ENV MCP_SIDECAR_LOCAL_MCP_COMMAND=/usr/local/bin/run-office-stdio.sh
+ENV MCP_SIDECAR_MCP_TYPE=office
+ENV MCP_SIDECAR_LOG_LEVEL=info
+ENV MCP_SIDECAR_LOG_ENCODING=json
+
+ENTRYPOINT ["/usr/local/bin/mcp-sidecar", "start"]

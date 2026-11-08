@@ -1,0 +1,13 @@
+[modules.dagger-go-sdk]
+source = "github.com/dagger/go-sdk@c14320260f9efe7a2aacc5b07312bb091f30dbe2"
+
+[sdks.go]
+module = "dagger-go-sdk"
+
+[sdks.go.scopes.ci]
+is-module = true
+name = "mcpofficeci"
+
+[modules.ci]
+source = "./ci"
+main = true

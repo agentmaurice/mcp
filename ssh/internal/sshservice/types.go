@@ -23,16 +23,23 @@ func NewError(code, format string, args ...any) *Error {
 }
 
 type Target struct {
-	ID                 string   `json:"target_id"`
-	Label              string   `json:"label"`
-	Host               string   `json:"host"`
-	Port               int      `json:"port"`
-	Username           string   `json:"username"`
-	HostKeyFingerprint string   `json:"host_key_fingerprint"`
-	CredentialRef      string   `json:"credential_ref"`
-	Enabled            bool     `json:"enabled"`
-	Published          bool     `json:"published"`
-	PolicyTags         []string `json:"policy_tags,omitempty"`
+	ID                 string `json:"target_id"`
+	Label              string `json:"label"`
+	Host               string `json:"host"`
+	Port               int    `json:"port"`
+	Username           string `json:"username"`
+	HostKeyFingerprint string `json:"host_key_fingerprint"`
+	// HostKeyType optionally names the pinned key type (ssh-ed25519, rsa,
+	// ecdsa-sha2-nistp256|384|521) so the handshake offers only matching
+	// algorithms. Empty: try each key family until the fingerprint matches.
+	HostKeyType   string   `json:"host_key_type,omitempty"`
+	CredentialRef string   `json:"credential_ref"`
+	Enabled       bool     `json:"enabled"`
+	Published     bool     `json:"published"`
+	PolicyTags    []string `json:"policy_tags,omitempty"`
+	// PublishRoot is the optional absolute server-side directory that SFTP
+	// publication tools are confined to. Empty means publication is disabled.
+	PublishRoot string `json:"publish_root,omitempty"`
 }
 
 type TargetSnapshot struct {
@@ -90,6 +97,9 @@ type TargetSummary struct {
 	Enabled     bool     `json:"enabled"`
 	Published   bool     `json:"published"`
 	PolicyTags  []string `json:"policy_tags,omitempty"`
+	// PublishEnabled reports whether the target has a publication root; the
+	// root itself is never exposed.
+	PublishEnabled bool `json:"publish_enabled"`
 }
 
 type Health struct {
@@ -110,6 +120,8 @@ type Capabilities struct {
 	MaxSessionsPerTarget  int      `json:"max_sessions_per_target"`
 	MaxCommandSeconds     int      `json:"max_command_seconds"`
 	MaxOutputBytes        int      `json:"max_output_bytes"`
+	MaxUploadBytes        int      `json:"max_upload_bytes"`
+	MaxListEntries        int      `json:"max_list_entries"`
 }
 
 type Targets struct {

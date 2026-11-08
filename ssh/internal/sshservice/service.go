@@ -110,9 +110,10 @@ func (s *Service) Capabilities(ctx context.Context) (Capabilities, error) {
 	return Capabilities{
 		Mode: s.config.Mode, Revision: snapshot.Revision,
 		AuthenticationMethods: []string{"private_key", "password"},
-		Functions:             []string{"targets", "target_check", "persistent_sessions", "synchronous_exec", "strict_host_key"},
+		Functions:             []string{"targets", "target_check", "persistent_sessions", "synchronous_exec", "strict_host_key", "sftp_upload", "sftp_remove", "sftp_list"},
 		MaxSessions:           s.config.MaxSessions, MaxSessionsPerTarget: s.config.MaxSessionsPerTarget,
 		MaxCommandSeconds: int(s.config.MaxCommandTimeout.Seconds()), MaxOutputBytes: s.config.MaxOutputBytes,
+		MaxUploadBytes: MaxUploadBytes, MaxListEntries: MaxListEntries,
 	}, nil
 }
 
@@ -124,7 +125,7 @@ func (s *Service) Targets(ctx context.Context) (Targets, error) {
 	visible := s.visibleTargets(snapshot)
 	result := Targets{Revision: snapshot.Revision, Mode: s.config.Mode, Targets: make([]TargetSummary, 0, len(visible))}
 	for _, target := range visible {
-		summary := TargetSummary{ID: target.ID, Label: target.Label, Enabled: target.Enabled, Published: target.Published, PolicyTags: append([]string(nil), target.PolicyTags...)}
+		summary := TargetSummary{ID: target.ID, Label: target.Label, Enabled: target.Enabled, Published: target.Published, PolicyTags: append([]string(nil), target.PolicyTags...), PublishEnabled: target.PublishRoot != ""}
 		if s.config.Mode == ModeBuild {
 			summary.Host, summary.Port, summary.Username, summary.Fingerprint = target.Host, target.Port, target.Username, target.HostKeyFingerprint
 		}

@@ -10,7 +10,7 @@ private GitLab repositories, and every tagged release is synchronised here
 Issues and pull requests are welcome; maintainers will port accepted changes
 upstream and re-publish.
 
-Last sync: 2026-11-07.
+Last sync: 2026-11-08.
 
 ## Servers
 
@@ -27,11 +27,13 @@ Last sync: 2026-11-07.
 | [memory](memory) | v1.2.3 | `ghcr.io/agentmaurice/mcp/memory*:v1.2.3` | MCP server providing a multi-tenant, read-safe SQL memory backed by DuckDB or PostgreSQL. Writes are handled by strict ingestion tools (no a |
 | [observe](observe) | v0.2.2 | `ghcr.io/agentmaurice/mcp/observe*:v0.2.2` | Bounded and redacted runtime trace normalization, comparison and deterministic diagnostics. |
 | [ocr](ocr) | v0.1.4 | `ghcr.io/agentmaurice/mcp/ocr*:v0.1.4` | Managed, synchronous OCR MCP server. The service holds no provider key: it |
+| [office](office) | v0.1.0 | `ghcr.io/agentmaurice/mcp/office*:v0.1.0` | Create DOCX and XLSX files, edit them with structured operations, compare two DOCX files into tracked changes, and inspect DOCX and XLSX files. |
 | [rag](rag) | v1.0.20 | `ghcr.io/agentmaurice/mcp/rag*:v1.0.20` | A standalone RAG (Retrieval-Augmented Generation) server implementing the Model Context Protocol (MCP). Use it to ingest a document corpus a |
 | [search](search) | v0.1.2 | `ghcr.io/agentmaurice/mcp/search*:v0.1.2` | Recherche hybride Meilisearch et passages citables. Configuration opérateur requise : moteur séparé, clé search et processus dédié à un principal/corpus homogène en droits. |
 | [shared](shared) | v0.1.0 | — | Go module shared by the AgentMaurice MCP servers. |
 | [sidecar](sidecar) | v0.1.3 | `ghcr.io/agentmaurice/mcp/sidecar*:v0.1.3` | Runtime sidecar for AgentMaurice MCP servers: a standalone Go binary that |
-| [ssh](ssh) | v0.2.1 | `ghcr.io/agentmaurice/mcp/ssh*:v0.2.1` | Governed synchronous SSH administration over pre-published remote targets with strict host-key verification. |
+| [social](social) | v0.1.1 | `ghcr.io/agentmaurice/mcp/social*:v0.1.1` | Draft, schedule and publish social posts through a connected Postiz account (Postiz Cloud or customer instance). |
+| [ssh](ssh) | v0.3.0 | `ghcr.io/agentmaurice/mcp/ssh*:v0.3.0` | Governed synchronous SSH administration over pre-published remote targets with strict host-key verification. |
 
 `shared` is the common library used by the other servers; it is not a
 server by itself.

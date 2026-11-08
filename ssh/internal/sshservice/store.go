@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"regexp"
 	"sort"
 	"strings"
@@ -77,6 +78,16 @@ func validateSnapshot(snapshot *TargetSnapshot) error {
 		}
 		if target.Published && !strings.HasPrefix(target.HostKeyFingerprint, "SHA256:") {
 			return fmt.Errorf("target %q requires a SHA256 host key fingerprint before publication", target.ID)
+		}
+		target.HostKeyType = strings.TrimSpace(target.HostKeyType)
+		if !validHostKeyType(target.HostKeyType) {
+			return fmt.Errorf("target %q has an unsupported host_key_type", target.ID)
+		}
+		target.PublishRoot = strings.TrimSpace(target.PublishRoot)
+		if target.PublishRoot != "" {
+			if !strings.HasPrefix(target.PublishRoot, "/") || target.PublishRoot == "/" || strings.ContainsRune(target.PublishRoot, 0) || path.Clean(target.PublishRoot) != target.PublishRoot {
+				return fmt.Errorf("target %q publish_root must be a clean absolute path other than /", target.ID)
+			}
 		}
 		if target.CredentialRef == "" {
 			return fmt.Errorf("target %q requires credential_ref", target.ID)

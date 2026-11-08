@@ -1,0 +1,4 @@
+/bin/
+/social
+/.env
+*.log

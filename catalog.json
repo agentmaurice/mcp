@@ -1,6 +1,6 @@
 {
   "schema_version": "agentmaurice.mcp-catalog/v1",
-  "generated_at": "2026-11-07T11:42:40Z",
+  "generated_at": "2026-11-08T08:15:19Z",
   "repository": "https://github.com/agentmaurice/mcp",
   "registry": "ghcr.io/agentmaurice/mcp",
   "servers": [
@@ -105,6 +105,11 @@
         "typst",
         "template",
         "export"
+      ],
+      "env_vars": [
+        "ARTIFACT_BUFFER_SERVICE_URL",
+        "ARTIFACT_BUFFER_TOKEN",
+        "ARTIFACT_BUFFER_NAMESPACE"
       ]
     },
     {
@@ -357,7 +362,12 @@
         }
       ],
       "tools": [],
-      "tags": []
+      "tags": [],
+      "env_vars": [
+        "BUFFER_SERVICE_URL",
+        "BUFFER_TOKEN",
+        "BUFFER_NAMESPACE"
+      ]
     },
     {
       "slug": "guard",
@@ -585,6 +595,61 @@
       "tags": []
     },
     {
+      "slug": "office",
+      "kind": "server",
+      "version": "v0.1.0",
+      "commit": "63d7b71b5b9f0b9286f949cb2e0755328924a691",
+      "description": "MCP server (Go) that creates, edits, compares and inspects Word (DOCX) and Excel (XLSX) files. It drives a document engine CLI as a separate process; the server itself never parses Office packages.",
+      "sidecar_compatible": true,
+      "one_compatible": false,
+      "one_notes": null,
+      "requires": [],
+      "install_image": null,
+      "images": [],
+      "tools": [
+        {
+          "name": "office_health_v1",
+          "description": "Check the Office MCP"
+        },
+        {
+          "name": "office_capabilities_v1",
+          "description": "Describe supported formats, operations and limits"
+        },
+        {
+          "name": "office_create_v1",
+          "description": "Create a DOCX (from Markdown or HTML) or an XLSX (from JSON)"
+        },
+        {
+          "name": "office_edit_v1",
+          "description": "Apply an atomic batch of structured edit operations to a DOCX or XLSX"
+        },
+        {
+          "name": "office_compare_v1",
+          "description": "Compare two DOCX files and return a DOCX with tracked changes"
+        },
+        {
+          "name": "office_inspect_v1",
+          "description": "Read a DOCX or XLSX: text, structure and document check issues"
+        }
+      ],
+      "tags": [
+        "office",
+        "docx",
+        "xlsx",
+        "word",
+        "excel",
+        "document",
+        "spreadsheet",
+        "tracked-changes",
+        "compare"
+      ],
+      "env_vars": [
+        "BUFFER_SERVICE_URL",
+        "BUFFER_TOKEN",
+        "BUFFER_NAMESPACE"
+      ]
+    },
+    {
       "slug": "rag",
       "kind": "server",
       "version": "v1.0.20",
@@ -709,10 +774,60 @@
       "tags": []
     },
     {
+      "slug": "social",
+      "kind": "server",
+      "version": "v0.1.1",
+      "commit": "680da8cf1822710108b887448e79433de727849c",
+      "description": "Go MCP server that drafts, schedules and publishes social posts through [Postiz](https://postiz.com). Postiz (AGPL-3.0) stays a **connected service**: either Postiz Cloud or the customer's own instance. This MCP **hosts no Postiz** and contains no Postiz code. It is only an HTTP client of Postiz's public REST API, written from the public documentation.",
+      "sidecar_compatible": true,
+      "one_compatible": false,
+      "one_notes": null,
+      "requires": [],
+      "install_image": null,
+      "images": [],
+      "tools": [
+        {
+          "name": "social_health_v1",
+          "description": "Check the Social MCP"
+        },
+        {
+          "name": "social_capabilities_v1",
+          "description": "Describe configuration, operations, limits and rate"
+        },
+        {
+          "name": "social_channels_v1",
+          "description": "List the channels connected to Postiz"
+        },
+        {
+          "name": "social_post_create_v1",
+          "description": "Create a draft, scheduled or immediate post"
+        },
+        {
+          "name": "social_post_get_v1",
+          "description": "Read the state of a post"
+        },
+        {
+          "name": "social_post_delete_v1",
+          "description": "Remove a post from the schedule or unpublish it"
+        }
+      ],
+      "tags": [
+        "social",
+        "postiz",
+        "publish",
+        "schedule"
+      ],
+      "env_vars": [
+        "BUFFER_SERVICE_URL",
+        "BUFFER_TOKEN",
+        "BUFFER_NAMESPACE"
+      ]
+    },
+    {
       "slug": "ssh",
       "kind": "server",
-      "version": "v0.2.1",
-      "commit": "a17cd692f2976760f7a4a0f2fe696389c8e91e55",
+      "version": "v0.3.0",
+      "commit": "f3924b6b5962eb9872a2d6bf056b7e0f8505cd43",
       "description": "Go MCP server for governed remote administration over published SSH targets. The Run only picks a known `target_id`; the destination, identity, host key and credential reference stay in the local projection.",
       "sidecar_compatible": true,
       "one_compatible": true,
@@ -722,13 +837,13 @@
         "ssh-credentials",
         "verified-host-keys"
       ],
-      "install_image": "ghcr.io/agentmaurice/mcp/ssh-sidecar:v0.2.1@sha256:0713a804fddccdbdddbc4af6363d7c688cad7f0ea4f23c0bba642ffad838deae",
+      "install_image": "ghcr.io/agentmaurice/mcp/ssh-sidecar:v0.3.0@sha256:d6c5f567fff519338d0882fedf60df70267d21bb723094a68bdb4027e5a04bb9",
       "images": [
         {
           "name": "ssh-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/ssh-sidecar:v0.2.1@sha256:0713a804fddccdbdddbc4af6363d7c688cad7f0ea4f23c0bba642ffad838deae",
+          "ref": "ghcr.io/agentmaurice/mcp/ssh-sidecar:v0.3.0@sha256:d6c5f567fff519338d0882fedf60df70267d21bb723094a68bdb4027e5a04bb9",
           "role": "sidecar",
-          "digest": "sha256:0713a804fddccdbdddbc4af6363d7c688cad7f0ea4f23c0bba642ffad838deae"
+          "digest": "sha256:d6c5f567fff519338d0882fedf60df70267d21bb723094a68bdb4027e5a04bb9"
         }
       ],
       "tools": [
@@ -763,6 +878,18 @@
         {
           "name": "ssh_session_close_v1",
           "description": "Close a session and destroy its in-memory connection state"
+        },
+        {
+          "name": "ssh_upload_v1",
+          "description": "Atomically upload one file below the publication root of a published target over SFTP"
+        },
+        {
+          "name": "ssh_remove_v1",
+          "description": "Remove one file below the publication root of a published target over SFTP"
+        },
+        {
+          "name": "ssh_list_v1",
+          "description": "List one directory (depth 1, bounded) below the publication root over SFTP"
         }
       ],
       "tags": [

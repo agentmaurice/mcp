@@ -11,9 +11,11 @@ use (
 	./memory
 	./observe
 	./ocr
+	./office
 	./rag
 	./search
 	./shared
 	./sidecar
+	./social
 	./ssh
 )
