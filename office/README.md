@@ -19,6 +19,10 @@ transports come from `mcp/shared/modernmcp`; the image is a sidecar image
 | `office_compare_v1` | `{before, after, author?, filename?}` returns a DOCX whose differences are tracked changes, with `changes: {insertions, deletions, changed_paragraphs}` |
 | `office_inspect_v1` | `{format, file}` returns `text` (Markdown for DOCX, TSV per sheet for XLSX), `structure` and `issues` from the document checks |
 
+`changes` of `office_compare_v1` are counts of logical revisions as reported by the GenOffice engine, not numbers of XML elements: one logical insertion or deletion may be written as several `w:ins`/`w:del` elements, and `changed_paragraphs` counts paragraphs, not revisions. The server does not reconcile them with the XML; it only refuses a zero count while matching elements are present in the produced file, or a positive count with no matching element (`invalid_output`); zero with zero is accepted. Do not compare `changes` with an element count of the returned file.
+
+Every produced file is checked before it is returned (`invalid_output` otherwise): a ZIP package, well-formed `[Content_Types].xml` and main part with the expected root and namespace, a content type (Override or Default extension) for every part, and relationships (`_rels/.rels`, `*/_rels/*.rels`) whose internal targets exist in the package and do not leave it (external targets are not resolved). Parts are read under the existing size bounds, with no extra dependency.
+
 `office_edit_v1` returns `applied` as reported by the engine; failed, skipped or fewer operations than requested give `op_rejected` (no file), and an answer without a batch report (or without a cells count for cell entries) gives `invalid_output`.
 
 Not supported: PPTX, rendering to PDF or images, pictures and any operation that

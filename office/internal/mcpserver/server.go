@@ -87,7 +87,7 @@ func NewWithDeps(deps Deps) *modernmcp.Server {
 	s.AddTool(readTool("office_capabilities_v1", "Describe the supported formats, operations and limits of the Office MCP.", schema(nil, nil)), h.capabilities)
 	s.AddTool(writeTool("office_create_v1", createDescription, createSchema()), h.create)
 	s.AddTool(writeTool("office_edit_v1", editDescription, editSchema()), h.edit)
-	s.AddTool(writeTool("office_compare_v1", "Compare two DOCX files and return a DOCX whose differences are tracked changes (insertions and deletions), with their counts.", compareSchema()), h.compare)
+	s.AddTool(writeTool("office_compare_v1", "Compare two DOCX files and return a DOCX whose differences are tracked changes (insertions and deletions). The counts are the engine's logical revisions, not a number of XML elements (the server only refuses a zero count with matching elements present, or a positive count with none).", compareSchema()), h.compare)
 	s.AddTool(readTool("office_inspect_v1", "Read a DOCX or XLSX file: its text, its structure (headings, tables, sheets) and the issues found by the document checks.", inspectSchema()), h.inspect)
 	return s
 }

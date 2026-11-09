@@ -218,6 +218,9 @@ func Render(ctx context.Context, req Request, compiler Compiler, opts Options) (
 			return nil, errf(CodeContextInvalid, "context.%s is required", name)
 		}
 	}
+	if err := checkReservedDataKeys(req.Data); err != nil {
+		return nil, err
+	}
 	if dataDepth(full, MaxDataDepth) > MaxDataDepth {
 		return nil, errf(CodeLimitsExceeded, "the data or the context is nested deeper than %d levels", MaxDataDepth)
 	}
@@ -583,3 +586,21 @@ func checkProjectPaths(files map[string]string, assets map[string][]byte, fragme
 }
 
 func quote(s string) string { return "\"" + s + "\"" }
+
+// checkReservedDataKeys refuses, at render time, data whose top-level keys are
+// platform namespaces (company, brand, doc, i18n). The input_schema check can
+// be bypassed with allOf or additionalProperties; the data stay under .data and
+// the context at the root, so this is a naming confusion, not a substitution,
+// but the contract forbids it.
+func checkReservedDataKeys(data any) error {
+	m, ok := data.(map[string]any)
+	if !ok {
+		return nil
+	}
+	for _, k := range sortedKeys(m) {
+		if reserved(k) {
+			return errf(CodeReservedNamespace, "data has the top-level key %q, a namespace reserved to the platform (company, brand, doc, i18n)", k)
+		}
+	}
+	return nil
+}

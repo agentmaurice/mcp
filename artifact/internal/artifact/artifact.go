@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/agentmaurice/mcpchatui/mcp/artifact/internal/interchange"
 	"github.com/agentmaurice/mcpchatui/mcp/artifact/internal/version"
 )
 
@@ -203,18 +203,16 @@ func csvContent(content interface{}) ([]byte, error) {
 		columns = append(columns, key)
 	}
 	sort.Strings(columns)
-	var buffer bytes.Buffer
-	writer := csv.NewWriter(&buffer)
-	_ = writer.Write(columns)
+	table := interchange.Table{Headers: columns}
 	for _, object := range objects {
 		record := make([]string, len(columns))
 		for index, column := range columns {
 			record[index] = fmt.Sprint(object[column])
 		}
-		_ = writer.Write(record)
+		table.Rows = append(table.Rows, record)
 	}
-	writer.Flush()
-	return buffer.Bytes(), writer.Error()
+	// Zero options: the historical output (comma, LF, minimal quoting, no BOM).
+	return interchange.WriteCSVUnbounded(table, interchange.CSVOptions{})
 }
 
 var tags = regexp.MustCompile(`<[^>]+>`)

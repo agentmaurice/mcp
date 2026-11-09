@@ -184,7 +184,8 @@ const codeInvalidOutput = "invalid_output"
 
 // checkOutput verifies a produced file before it is reported as a document:
 // non-empty, within the limit, a ZIP package with [Content_Types].xml and the
-// main part of the requested format.
+// main part of the requested format, well-formed roots, a content type for
+// every part and relationships whose internal targets exist.
 func checkOutput(format string, data []byte, max int) error {
 	bad := func(why string) error {
 		return terr(codeInvalidOutput, "the engine produced an invalid "+format+" file: "+why)
@@ -223,6 +224,13 @@ func checkOutput(format string, data []byte, max int) error {
 	}
 	if err := checkXMLRoot(doc, local, spaces...); err != nil {
 		return bad(main + " is not valid OOXML")
+	}
+	budget := int64(maxRelsTotalBytes)
+	if err := checkContentTypes(files, &budget); err != nil {
+		return bad("[Content_Types].xml does not type every part")
+	}
+	if err := checkRelationships(files, &budget); err != nil {
+		return bad("a relationship is broken: " + err.Error())
 	}
 	return nil
 }

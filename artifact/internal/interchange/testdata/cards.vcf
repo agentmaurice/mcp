@@ -1,0 +1,21 @@
+BEGIN:VCARD
+VERSION:4.0
+UID:urn:uuid:3bce0a44-0e1d-5087-bf6f-41f1aaccbaa0
+FN:Ada Lovelace\, Comtesse
+N:Lovelace;Ada;;Dr.;
+ORG:Analytical Engines\; Ltd;R&D
+TITLE:Mathématicienne
+EMAIL;TYPE=work:ada@example.com
+EMAIL:ada@home.example
+TEL;TYPE=work;VALUE=uri:tel:+33123456789
+TEL;TYPE=cell;VALUE=text:06.12.34.56.78
+ADR;TYPE=work:;;10 rue de la Paix;Paris;;75002;France
+URL:https://example.com/ada
+NOTE:Ligne 1\nLigne 2\, 😀\; fin. Un texte assez long pour obliger le pli
+ age à soixante-quinze octets éééé.
+END:VCARD
+BEGIN:VCARD
+VERSION:4.0
+UID:urn:uuid:b5c51424-7a6c-5fc9-940e-6c72982d635a
+FN:Bob
+END:VCARD

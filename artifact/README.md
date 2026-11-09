@@ -42,6 +42,44 @@ has more fields (existing keys unchanged), and the input schema of
 `artifact_render_v1` lists the optional template arguments (no field is required
 by the schema any more; v0.1 arguments are still validated by the tool).
 
+## Utility outputs: `ics`, `vcf`, `csv` (`artifact_render_v1`, no template)
+
+`artifact_render_v1` also renders typed business data to an iCalendar (RFC 5545),
+a vCard 4.0 (RFC 6350) or a normalized CSV file, with a Go engine
+(`internal/interchange`, standard library only). These outputs have no template:
+the call carries `output` and `data` (and `options` for `csv`), nothing else
+(`invalid_arguments` otherwise). `data` is validated against a closed JSON Schema
+(`additionalProperties: false` at every level, published as `utility_outputs` by
+`artifact_capabilities_v1`), then decoded strictly; no free text is ever
+interpreted. Errors reuse the existing codes: `data_invalid` (schema or semantic
+rule, with the path), `limits_exceeded` (bounds), `invalid_arguments`,
+`storage_required`, `buffer_failed`.
+
+- `ics`: `{name?, method?, events: [{uid?, dtstamp?, start, end | duration_minutes, all_day?, timezone?, summary, description?, location?, url?, status?, organizer?, attendees?, rrule?}]}`.
+  A `start` with a zone designator (RFC 3339) is an instant: UTC (`...Z`) or, with
+  `timezone`, `TZID` plus an embedded `VTIMEZONE` computed from the IANA data
+  compiled into the binary; a local `start` (`2026-11-10T09:30`) requires
+  `timezone`. All-day events use dates (`end` is exclusive) or `duration_days` (`P<n>D`); `duration_minutes` is for timed events only. `rrule`: `freq`,
+  `interval`, `count` or `until`, `by_day`; with a timezone other than UTC the rule must be bounded (`count` or `until`, at most 100 years) and the VTIMEZONE covers all its occurrences. `uid` defaults to a digest of the
+  event, `dtstamp` to the start in UTC, so the output is identical at every render.
+- `vcf`: `{cards: [{uid?, fn, n?, org?, title?, email?, tel?, adr?, url?, note?}]}`;
+  `email`, `tel`, `adr`, `url` are arrays, `org` lists the organization then its units.
+  `tel` is a `tel:` URI for a global number (`+` country code), and text (`VALUE=text`, form kept) for a local one. `uid` defaults to a UUID derived from the card.
+- `csv`: `{headers?, rows: [[cell...] | {header: cell}]}`, a cell being a string,
+  number, boolean or null. `options`: `separator` (`,` `;` tab `|`), `bom`,
+  `line_ending` (`crlf` default, `lf`), `quote` (`minimal`, `all`),
+  `expected_columns`, `expected_headers`, `neutralize_formulas`. Every row must
+  have as many columns as the headers (or the first row). `artifact_create_v1`
+  with `csv` uses the same writer with the zero options (comma, LF, minimal
+  quoting) and none of the bounds below: its output and limits are those of v0.1.
+
+A CSV cell is never rewritten: a cell with a line break (CR, LF or CRLF) is quoted and written as given, whatever `line_ending` and `quote` are; `line_ending` applies to record ends only.
+
+Text values are escaped (backslash, semicolon, comma, line breaks) and every line
+is folded at 75 octets with CRLF, without splitting a UTF-8 sequence. Bounds:
+500 events or cards, 100 attendees per event, 32 KiB per text field or CSV cell,
+50 000 CSV rows, 256 columns, 8 MiB of output (these bounds apply to `artifact_render_v1` only) (2 MiB inline without Buffer).
+
 Engines: **Typst 0.15.1** (`pdf`, `png`; the version is enforced), `html`
 (`html/template`, contextual escaping) and `text` (`txt`). Typst packages
 (`@preview/...`) are not supported in v0.2: any string literal that looks like a

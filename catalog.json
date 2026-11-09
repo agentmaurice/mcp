@@ -1,6 +1,6 @@
 {
   "schema_version": "agentmaurice.mcp-catalog/v1",
-  "generated_at": "2026-11-08T19:07:33Z",
+  "generated_at": "2026-11-09T07:11:37Z",
   "repository": "https://github.com/agentmaurice/mcp",
   "registry": "ghcr.io/agentmaurice/mcp",
   "servers": [
@@ -53,20 +53,20 @@
     {
       "slug": "artifact",
       "kind": "server",
-      "version": "v0.2.2",
-      "commit": "672453dee472fd334e2a305e02740c4f0af18984",
+      "version": "v0.2.4",
+      "commit": "0b043f3a42e87204c54d3042f10993d208fc847f",
       "description": "Go MCP server for creating, patching, rendering and inspecting deterministic deliverables. Every result carries a provenance manifest with format, MIME type, size, renderer and SHA-256. Version 0.2.0 adds the rendering engine of Document studio: it renders `template/v1` folders to PDF, PNG, HTML or text.",
       "sidecar_compatible": true,
       "one_compatible": true,
       "one_notes": null,
       "requires": [],
-      "install_image": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.2.2@sha256:338432503cc6e8e246f6ee5cc6a0aadcbf50cdc39e75abe1dcf8229cca9b52f7",
+      "install_image": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.2.4@sha256:550cb5ca1f6e135a0b6c4e7d2f6c26cd97e793d4b6370b63b40cd2a9554ba1d1",
       "images": [
         {
           "name": "artifact-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.2.2@sha256:338432503cc6e8e246f6ee5cc6a0aadcbf50cdc39e75abe1dcf8229cca9b52f7",
+          "ref": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.2.4@sha256:550cb5ca1f6e135a0b6c4e7d2f6c26cd97e793d4b6370b63b40cd2a9554ba1d1",
           "role": "sidecar",
-          "digest": "sha256:338432503cc6e8e246f6ee5cc6a0aadcbf50cdc39e75abe1dcf8229cca9b52f7"
+          "digest": "sha256:550cb5ca1f6e135a0b6c4e7d2f6c26cd97e793d4b6370b63b40cd2a9554ba1d1"
         }
       ],
       "tools": [
@@ -238,17 +238,70 @@
     {
       "slug": "cms",
       "kind": "server",
-      "version": null,
-      "commit": "6f21831e47d93c0b85bc05dafdab9a02994b5215",
-      "description": "",
-      "sidecar_compatible": false,
-      "one_compatible": false,
-      "one_notes": "Tool inventory is absent from this metadata; discover runtime tools after installation.",
-      "requires": [],
-      "install_image": null,
-      "images": [],
-      "tools": [],
-      "tags": []
+      "version": "v0.1.1",
+      "commit": "d6b0fd1c688ef1a9d5e24027260e57c9da36030e",
+      "description": "Go MCP server that creates, updates, schedules and unpublishes posts and pages, and uploads images, on a **connected CMS**. The first adapter is **WordPress** (self-hosted or any site that exposes the core REST API). The CMS stays a connected service owned by the customer: this MCP **hosts no CMS**, contains no WordPress code and needs **no WordPress plugin**. It is only an HTTP client of the native REST API `/wp-json/wp/v2` (posts, pages, media), authenticated with the Application Passwords of WordPress core, written from the public documentation. One adapter per CMS: Ghost and others come later behind the same tools.",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": "Needs a WordPress site with an application password: set CMS_WORDPRESS_URL, CMS_WORDPRESS_USER and CMS_WORDPRESS_APP_PASSWORD as secret deployment variables (maurice deployment variable set NAME --secret) before deploying.",
+      "requires": [
+        "wordpress-connection"
+      ],
+      "install_image": "ghcr.io/agentmaurice/mcp/cms-sidecar:v0.1.1@sha256:883516bffbcdc7c7d3f806966a3574978b870321f03bb10c6de3ef9718dc4fd2",
+      "images": [
+        {
+          "name": "cms-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/cms-sidecar:v0.1.1@sha256:883516bffbcdc7c7d3f806966a3574978b870321f03bb10c6de3ef9718dc4fd2",
+          "role": "sidecar",
+          "digest": "sha256:883516bffbcdc7c7d3f806966a3574978b870321f03bb10c6de3ef9718dc4fd2"
+        }
+      ],
+      "tools": [
+        {
+          "name": "cms_health_v1",
+          "description": "Check the CMS MCP"
+        },
+        {
+          "name": "cms_capabilities_v1",
+          "description": "Describe configuration, operations and limits"
+        },
+        {
+          "name": "cms_post_create_v1",
+          "description": "Create a draft, published or scheduled post or page"
+        },
+        {
+          "name": "cms_media_upload_v1",
+          "description": "Upload an image to the media library"
+        },
+        {
+          "name": "cms_post_get_v1",
+          "description": "Read the state of a post or page"
+        },
+        {
+          "name": "cms_post_update_v1",
+          "description": "Partially update a post or page"
+        },
+        {
+          "name": "cms_post_unpublish_v1",
+          "description": "Send a post or page back to draft or to the trash"
+        }
+      ],
+      "tags": [
+        "cms",
+        "wordpress",
+        "publish",
+        "blog"
+      ],
+      "env_vars": [
+        "BUFFER_SERVICE_URL",
+        "BUFFER_TOKEN",
+        "BUFFER_NAMESPACE"
+      ],
+      "secret_env": [
+        "CMS_WORDPRESS_URL",
+        "CMS_WORDPRESS_USER",
+        "CMS_WORDPRESS_APP_PASSWORD"
+      ]
     },
     {
       "slug": "data",
@@ -378,6 +431,56 @@
       ],
       "tools": [],
       "tags": [],
+      "env_vars": [
+        "BUFFER_SERVICE_URL",
+        "BUFFER_TOKEN",
+        "BUFFER_NAMESPACE"
+      ]
+    },
+    {
+      "slug": "form",
+      "kind": "server",
+      "version": "v0.1.1",
+      "commit": "52950208076241d95b2071c93eddd4f99e4e4048",
+      "description": "Go MCP server that **inspects and fills the AcroForm fields of an existing PDF** without breaking the rest of the file. It is built on [pdfcpu](https://github.com/pdfcpu/pdfcpu) (Apache-2.0, `v0.16.4`), used as a Go module through its Go API (no CLI, no external process).",
+      "sidecar_compatible": true,
+      "one_compatible": true,
+      "one_notes": "Inspects and fills AcroForm fields of existing PDFs (pdfcpu); refuses XFA, encrypted and signed PDFs; reads and writes files through the One Storage and Buffer.",
+      "requires": [],
+      "install_image": "ghcr.io/agentmaurice/mcp/form-sidecar:v0.1.1@sha256:4b420962e32e6a13d3265a3619d87c28055daa3226daafe2f6917b3bf427f103",
+      "images": [
+        {
+          "name": "form-sidecar",
+          "ref": "ghcr.io/agentmaurice/mcp/form-sidecar:v0.1.1@sha256:4b420962e32e6a13d3265a3619d87c28055daa3226daafe2f6917b3bf427f103",
+          "role": "sidecar",
+          "digest": "sha256:4b420962e32e6a13d3265a3619d87c28055daa3226daafe2f6917b3bf427f103"
+        }
+      ],
+      "tools": [
+        {
+          "name": "form_health_v1",
+          "description": "Check the Form MCP"
+        },
+        {
+          "name": "form_capabilities_v1",
+          "description": "Describe field types, limits, refusals and error codes"
+        },
+        {
+          "name": "form_inspect_v1",
+          "description": "List the fields of a PDF form with type, value, options and flags, and report encryption, XFA and signatures"
+        },
+        {
+          "name": "form_fill_v1",
+          "description": "Fill the fields of a PDF form by name as one atomic batch, with an integrity check of the produced file"
+        }
+      ],
+      "tags": [
+        "form",
+        "pdf",
+        "acroform",
+        "fill",
+        "questionnaire"
+      ],
       "env_vars": [
         "BUFFER_SERVICE_URL",
         "BUFFER_TOKEN",
@@ -612,20 +715,20 @@
     {
       "slug": "office",
       "kind": "server",
-      "version": "v0.1.1",
-      "commit": "f2683d5ca8655e6162a1ebe83e7c04daabc1c1f1",
+      "version": "v0.1.2",
+      "commit": "f5db6473a2039ad577f81c2b75d0bb06d4da25ac",
       "description": "MCP server (Go) that creates, edits, compares and inspects Word (DOCX) and Excel (XLSX) files. It drives a document engine CLI as a separate process; the server itself never parses Office packages.",
       "sidecar_compatible": true,
       "one_compatible": true,
       "one_notes": "Creates, edits, compares and inspects DOCX and XLSX files; reads and writes them through the One Storage and Buffer.",
       "requires": [],
-      "install_image": "ghcr.io/agentmaurice/mcp/office-sidecar:v0.1.1@sha256:23550e08fed212de065fb5f575da1cbe7d39b9754d697d349e1ce330d458fcfe",
+      "install_image": "ghcr.io/agentmaurice/mcp/office-sidecar:v0.1.2@sha256:a9cf0f4447315182fc2f4cc1fc4c20654a203f6a004dded957232c55c67fa801",
       "images": [
         {
           "name": "office-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/office-sidecar:v0.1.1@sha256:23550e08fed212de065fb5f575da1cbe7d39b9754d697d349e1ce330d458fcfe",
+          "ref": "ghcr.io/agentmaurice/mcp/office-sidecar:v0.1.2@sha256:a9cf0f4447315182fc2f4cc1fc4c20654a203f6a004dded957232c55c67fa801",
           "role": "sidecar",
-          "digest": "sha256:23550e08fed212de065fb5f575da1cbe7d39b9754d697d349e1ce330d458fcfe"
+          "digest": "sha256:a9cf0f4447315182fc2f4cc1fc4c20654a203f6a004dded957232c55c67fa801"
         }
       ],
       "tools": [

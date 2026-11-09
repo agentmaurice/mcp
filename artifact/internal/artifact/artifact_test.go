@@ -42,3 +42,16 @@ func TestPatchAndRenderPDF(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// artifact_create_v1 keeps its v0.1 behaviour: no per-cell bound (AGENT-1584).
+func TestCreateCSVHasNoCellBound(t *testing.T) {
+	cell := strings.Repeat("a", 32769)
+	got, err := Create("csv", []interface{}{map[string]interface{}{"k": cell}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload, _ := DecodeContent(got.ContentBase64)
+	if string(payload) != "k\n"+cell+"\n" {
+		t.Fatal("unexpected CSV")
+	}
+}

@@ -1,0 +1,13 @@
+version: '3'
+
+tasks:
+  fmt:
+    cmds: [gofmt -w cmd internal]
+  vet:
+    cmds: [go vet ./...]
+  test:
+    cmds: [go test -race ./...]
+  build:
+    cmds: [go build -trimpath -o bin/form ./cmd/form]
+  check:
+    deps: [fmt, vet, test, build]

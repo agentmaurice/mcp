@@ -841,3 +841,25 @@ func TestOutputsStayOutsideTheRoot(t *testing.T) {
 		t.Fatalf("the PDF has %d pages, previews 3", n)
 	}
 }
+
+// AGENT-1789: the input_schema check of reserved names is bypassable (allOf,
+// additionalProperties), so the render refuses reserved top-level data keys.
+func TestReservedDataKeysRefusedAtRender(t *testing.T) {
+	ctx, assets := templatetest.Context(t)
+	tpl := inlineTypst(t, "= Hello\n") // input_schema {"type":"object"} accepts any key
+	for _, key := range []string{"company", "brand", "doc", "i18n"} {
+		_, err := template.Render(context.Background(), template.Request{Template: tpl, Data: map[string]any{key: map[string]any{"x": 1}},
+			Context: ctx, Assets: assets, Output: "pdf"}, nil, template.Options{})
+		var terr *template.Error
+		if !errors.As(err, &terr) || terr.Code != template.CodeReservedNamespace {
+			t.Errorf("data key %q: want reserved_namespace, got %v", key, err)
+		}
+	}
+	// A reserved name nested below the top level stays allowed.
+	_, err := template.Render(context.Background(), template.Request{Template: tpl, Data: map[string]any{"x": map[string]any{"company": 1}},
+		Context: ctx, Assets: assets, Output: "pdf"}, nil, template.Options{})
+	var terr *template.Error
+	if errors.As(err, &terr) && terr.Code == template.CodeReservedNamespace {
+		t.Errorf("nested reserved name must not be refused: %v", err)
+	}
+}

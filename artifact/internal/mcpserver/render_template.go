@@ -13,13 +13,14 @@ import (
 
 	artifactengine "github.com/agentmaurice/mcpchatui/mcp/artifact/internal/artifact"
 	"github.com/agentmaurice/mcpchatui/mcp/artifact/internal/buffer"
+	"github.com/agentmaurice/mcpchatui/mcp/artifact/internal/interchange"
 	"github.com/agentmaurice/mcpchatui/mcp/artifact/internal/template"
 	"github.com/agentmaurice/mcpchatui/mcp/artifact/internal/typst"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
 const (
-	renderDescription = "Render a template/v1 folder (inline manifest and files) with data and the platform context to a deterministic pdf, png, html or txt, with PNG previews of every page and a provenance manifest. Without `template`, the v0.1 call (format, content, output_format) still renders Markdown or HTML to a simple PDF."
+	renderDescription = "Render a template/v1 folder (inline manifest and files) with data and the platform context to a deterministic pdf, png, html or txt, with PNG previews of every page and a provenance manifest. Without `template`, output ics, vcf or csv renders typed `data` (closed schema, see capabilities) to an iCalendar, vCard 4.0 or normalized CSV file. Without `template`, the v0.1 call (format, content, output_format) still renders Markdown or HTML to a simple PDF."
 	// Largest request accepted by the template render (template + data + assets).
 	maxRenderRequestBytes = 4 * 1024 * 1024
 	// Budget for inline PNG previews when no Buffer is configured.
@@ -91,7 +92,8 @@ func renderSchema() mcp.ToolInputSchema {
 			"doc": map[string]interface{}{"type": "object"}, "i18n": map[string]interface{}{"type": "object"},
 		}),
 		"assets":             map[string]interface{}{"type": "object", "additionalProperties": str, "description": "Local files referenced by the brand (logo), base64, by file name."},
-		"output":             map[string]interface{}{"type": "string", "enum": []string{"pdf", "png", "html", "txt"}},
+		"output":             map[string]interface{}{"type": "string", "enum": []string{"pdf", "png", "html", "txt", "ics", "vcf", "csv"}, "description": "pdf, png, html, txt render a template; ics, vcf, csv render typed `data` with a Go engine, without template (see utility_outputs in artifact_capabilities_v1)."},
+		"options":            map[string]interface{}{"type": "object", "description": "csv output only: separator, bom, line_ending, quote, expected_columns, expected_headers, neutralize_formulas."},
 		"mode":               map[string]interface{}{"type": "string", "enum": []string{"preview", "final"}, "default": "preview"},
 		"creation_timestamp": map[string]interface{}{"type": "integer", "description": "Fixed Unix timestamp; default is doc.date at 00:00 UTC."},
 	}, nil)
@@ -259,7 +261,10 @@ func (h *handlers) capabilities(ctx context.Context, _ mcp.CallToolRequest) (*mc
 			{"name": "typst", "version": template.TypstVersion, "available": typstOK, "outputs": []string{"pdf", "png"}, "previews": "png_per_page"},
 			{"name": "html", "version": "go-template", "available": true, "outputs": []string{"html"}, "previews": "none"},
 			{"name": "text", "version": "go-template", "available": true, "outputs": []string{"txt"}, "previews": "none"},
+			{"name": "interchange", "version": "go-stdlib", "available": true, "outputs": []string{"ics", "vcf", "csv"}, "previews": "none"},
 		},
+		// Outputs rendered from typed data, without template: the closed JSON Schema of `data` (and of `options` for csv).
+		"utility_outputs":   utilityCapabilities(),
 		"template_contract": "agentmaurice.template/v1",
 		"render_modes":      []string{template.ModePreview, template.ModeFinal},
 		"limits": map[string]interface{}{
@@ -271,13 +276,26 @@ func (h *handlers) capabilities(ctx context.Context, _ mcp.CallToolRequest) (*mc
 			template.CodeManifestSchema, template.CodeEntryMissing, template.CodeInputSchemaMissing, template.CodeInputSchemaInvalid,
 			template.CodeReservedNamespace, template.CodeForbiddenFunction, template.CodeUnknownFunction, template.CodeTemplateSyntax,
 			template.CodeTemplateExec, template.CodeFragmentUndeclared, template.CodeFragmentMissing, template.CodeLimitsExceeded,
-			template.CodeTypstCodeContext, template.CodeTypstRawContext, template.CodeTypstMathContext, template.CodeTypstCommentContext, template.CodeContextInvalid, template.CodeDataInvalid, template.CodeFilePathInvalid,
+			template.CodeTypstCodeContext, template.CodeTypstEscapedAction, template.CodeTypstRawContext, template.CodeTypstMathContext, template.CodeTypstCommentContext, template.CodeContextInvalid, template.CodeDataInvalid, template.CodeFilePathInvalid,
 			template.CodeEngineUnsupported, template.CodeOutputUnsupported, template.CodePackageImport, template.CodeCompileFailed,
 			template.CodeRenderTimeout, template.CodeEngineUnavailable, template.CodeEngineVersion, template.CodeAssetInvalid, template.CodeReservedFileName, template.CodeFileExtension,
 			"invalid_arguments", "storage_required", "buffer_failed",
+			"invalid_artifact", "artifact_create_failed", "artifact_patch_failed", "artifact_render_failed", // v0.1 contract
 		},
 		"max_artifact_bytes":  maxArtifactBytes,
 		"storage_integration": false,
 		"buffer_configured":   h.deps.Buffer != nil,
 	}), nil
+}
+
+func utilityCapabilities() []map[string]interface{} {
+	var list []map[string]interface{}
+	for _, u := range utilityOutputs {
+		entry := map[string]interface{}{"output": u.output, "mime_type": u.mime, "filename": u.filename, "data_schema": interchange.Schema(u.output)}
+		if u.output == interchange.OutputCSV {
+			entry["options_schema"] = interchange.Schema("csv.options")
+		}
+		list = append(list, entry)
+	}
+	return list
 }

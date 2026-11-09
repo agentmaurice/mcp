@@ -5,8 +5,10 @@ use (
 	./artifact
 	./brain
 	./browser
+	./cms
 	./data
 	./decision
+	./form
 	./guard
 	./memory
 	./observe

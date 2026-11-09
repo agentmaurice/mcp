@@ -70,6 +70,12 @@ func (h *handlers) render(ctx context.Context, request mcp.CallToolRequest) (*mc
 	if _, ok := request.GetArguments()["template"]; ok {
 		return h.renderTemplate(ctx, request)
 	}
+	// Utility outputs (ics, vcf, csv): typed data, no template.
+	if output, _ := request.GetArguments()["output"].(string); output != "" {
+		if _, _, ok := utilityOutput(output); ok {
+			return h.renderUtility(ctx, request, output)
+		}
+	}
 	return renderLegacy(request)
 }
 

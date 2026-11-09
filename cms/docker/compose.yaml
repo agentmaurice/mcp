@@ -1,0 +1,58 @@
+# Disposable WordPress + MariaDB for the optional integration test of the CMS MCP.
+# Nothing here is a deployment: the data lives in anonymous-by-name volumes that
+# `docker compose -f docker/compose.yaml down -v` removes. Credentials are
+# throwaway and the site only listens on 127.0.0.1.
+name: cms-mcp-it
+
+services:
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wordpress
+      MARIADB_PASSWORD: wordpress-it-only
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  wordpress:
+    image: wordpress:6.8-php8.3-apache
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress-it-only
+      # Application Passwords are available only on SSL sites or local environments
+      # (wp_is_application_passwords_available): declare this site local, plain HTTP.
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_ENVIRONMENT_TYPE', 'local');
+    volumes:
+      - wp_data:/var/www/html
+
+  # wp-cli shares the WordPress files and the database; run it with
+  # `docker compose --profile tools run --rm wpcli ...` (see docker/wp-setup.sh).
+  wpcli:
+    image: wordpress:cli-2.11-php8.3
+    profiles: ["tools"]
+    user: "33:33"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress-it-only
+    volumes:
+      - wp_data:/var/www/html
+
+volumes:
+  wp_data:
