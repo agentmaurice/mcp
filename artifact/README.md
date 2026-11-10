@@ -32,6 +32,7 @@ schema of the business data), provided inline. The call:
 | `output` | `pdf`, `png`, `html` or `txt` (must be declared by the manifest and produced by its engine) |
 | `mode` | `preview` (default, previews at 72 ppi) or `final` (144 ppi) |
 | `creation_timestamp` | optional fixed Unix time; default is `doc.date` at 00:00 UTC |
+| `print` | optional print layout for the `pdf` output (bleed, mirrored margins, crop marks, PDF page boxes), see below |
 
 A call without `template` keeps the v0.1 contract (`format`, `content`,
 `output_format`): its response is identical to the one of origin/main (same
@@ -87,6 +88,40 @@ or image. The engine encodes in Go, the fragment draws in pure Typst:
 The encoder is the standard library only (`internal/template/qr.go`, no QR dependency). Its
 matrices are decoded back by an independent ZXing port (`github.com/makiuchi-d/gozxing`, MIT,
 test dependency only) for every length from 1 to 512 bytes at the four levels.
+
+## Professional print: the `print` option and `fragments/print.typ`
+
+`artifact_render_v1` takes an optional `print` argument for the `pdf` output of a
+template that declares `fragments/print.typ` (contract `template/v1`, AGENT-1921). It is a render option, not business
+data. A closed JSON Schema is published by `artifact_capabilities_v1` (`print.schema`):
+
+| Field | Type | Default | Bounds |
+| --- | --- | --- | --- |
+| `bleed_mm` | number | `3` | 0 to 5 mm, both included |
+| `mirror_margins` | boolean | `false` | inside and outside margins alternate with the page parity (recto verso) |
+| `crop_marks` | boolean | `false` | crop marks in a 7 mm mark zone around the bleed |
+
+`print: {}` means a 3 mm bleed and nothing else; `print: null` is the same as no `print` (the published schema is `["object", "null"]`). Unknown fields, wrong types and an
+out-of-range `bleed_mm` fail with `print_invalid`; the option on another output than `pdf`, on a
+template that does not declare the fragment, or on a non-Typst engine fails with `print_unsupported`.
+
+How it works. The platform writes `print-options` into `/brand.typ` (only when the option is
+given: without it every byte, the PDF, `/brand.typ` and the provenance, is the same as before the
+option). The fragment `print-layout` lays the pages out: the page is the finished size grown by
+`bleed + mark zone` on each side, the template margins are added inside, `background` is drawn on the finished size plus the bleed,
+and the crop marks are drawn outside the finished area, outside the bleed. Typst 0.15.1 cannot write the PDF
+page boxes, so after the compilation the engine writes `/BleedBox` (the finished size plus the bleed) and
+`/TrimBox` (the finished size) into every page dictionary, as an incremental update of the file Typst produced
+(standard library only: the original bytes are kept, the page objects are appended, then a new xref section and
+trailer with `/Prev`). The `/MediaBox` is the whole page, mark zone included. The result is reproducible: two
+renders are identical to the byte, and the provenance echoes `print`. When `print` is given the engine compiles the project a second time, PDF only and without `print`, and
+compares the MediaBox of every page: each page with `print` must be the page without it grown by 2 x (bleed + mark zone) in
+width and height (0.01 pt), with the same page count. Otherwise the template declares `fragments/print.typ` without applying
+`print-layout` and the render fails with `print_unsupported` ("the template declares fragments/print.typ but does not apply
+print-layout"), so no PDF carries boxes that do not match its layout. The `TrimBox` is computed from the page without `print`.
+Cost: one more Typst PDF compilation per print render (about 2 s on the goldens, no previews). A static check comes first: the Typst entry must apply the fragment with a `#show: print-layout` (or `#show: print-layout.with(...)`) rule, outside comments, strings and raw text, else the same `print_unsupported`. With `bleed_mm` 0 and no crop marks nothing grows, and a result identical to the render without `print` is correct (`TrimBox` = `BleedBox` = `MediaBox`). The layout is guaranteed by the contract fragment: the engine checks that it is applied and computes the boxes from the render without `print`; a template that imitates the geometry on purpose without applying the fragment is outside the threat model. A PDF the update cannot read fails
+with `print_box_failed`. The PNG previews show the same layout. The Typst fragment is vendored from
+pilote-maurice `contracts/template/v1` (see `internal/template/contract/PIN`).
 
 ## Utility outputs: `ics`, `vcf`, `csv` (`artifact_render_v1`, no template)
 
@@ -341,7 +376,7 @@ Failures return `isError` with a stable `error` code: `invalid_arguments`,
 `manifest_schema`, `file_path_invalid`, `entry_missing`, `input_schema_missing`,
 `input_schema_invalid`, `reserved_namespace`, `data_invalid`, `context_invalid`,
 `forbidden_function`, `unknown_function`, `template_syntax`, `template_exec`,
-`typst_code_context`, `typst_raw_context`, `typst_math_context`, `typst_comment_context`, `qr_input_invalid`, `qr_input_too_long`, `qr_level_invalid`, `package_import_forbidden`, `fragment_undeclared`,
+`typst_code_context`, `typst_raw_context`, `typst_math_context`, `typst_comment_context`, `qr_input_invalid`, `qr_input_too_long`, `qr_level_invalid`, `print_invalid`, `print_unsupported`, `print_box_failed`, `package_import_forbidden`, `fragment_undeclared`,
 `fragment_missing`, `engine_unsupported`, `output_unsupported`, `limits_exceeded`,
 `engine_unavailable`, `engine_version_mismatch`, `compile_failed`, `mjml_failed`,
 `mjml_include_outside_fragments`, `mjml_include_denied`, `message_output_invalid`,

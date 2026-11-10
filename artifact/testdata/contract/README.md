@@ -15,3 +15,6 @@ when copied). `golden/context/company.example.json` is not recopied (see `intern
 
 `golden/valid/qr-badge` (qr/v1 QR codes, AGENT-1919) is copied unchanged from commit
 466083631794bc87b4d25d60a0a1052fb333938e of pilote-maurice main (merge of !1017).
+
+`golden/valid/print-brochure` (print option, AGENT-1921) is copied unchanged from commit
+dbfa465a9ee4a7e07e7f51659c91b517817066e0 of pilote-maurice main (merge of !1019).

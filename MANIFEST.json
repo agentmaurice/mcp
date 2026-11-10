@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-11-10T11:01:25Z",
+  "generated_at": "2026-11-10T14:51:01Z",
   "github": "agentmaurice/mcp",
   "mcp": {
     "api": {"version": "v0.1.5", "ref": "refs/tags/v0.1.5", "commit": "8c03e045cbecd75e6cdbc14b5eefa82d62dab0cb"},
-    "artifact": {"version": "v0.2.8", "ref": "refs/tags/v0.2.8", "commit": "c3721469074a0c641b0672b5750b6b73ba94c223"},
+    "artifact": {"version": "v0.2.9", "ref": "refs/tags/v0.2.9", "commit": "9b56032190c0def9edf95a2b0064edbc99ec9c9e"},
     "brain": {"version": "v1.3.1", "ref": "refs/tags/v1.3.1", "commit": "11586e0c3297b3e5f07a187a1baca4af9e22e211"},
     "browser": {"version": "v1.0.30", "ref": "refs/tags/v1.0.30", "commit": "56d5b588f624c9800a20383a6d13a34ea1dcd954"},
     "cms": {"version": "v0.1.1", "ref": "refs/tags/v0.1.1", "commit": "d6b0fd1c688ef1a9d5e24027260e57c9da36030e"},

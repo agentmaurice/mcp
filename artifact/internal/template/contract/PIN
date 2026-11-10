@@ -15,3 +15,7 @@ source_commit: 466083631794bc87b4d25d60a0a1052fb333938e (pilote-maurice main, me
 the other vendored files are unchanged by this lot
 
 AGENT-1919 (ECI 26 for non-ASCII QR text): contract commit e07e1604961ddaf3821bad29574b9f822f5b1a4f (pilote-maurice main, merge of !1018); the QR encoder of render_reference is byte-identical to internal/template/qr.go. It changes the reference renderer, README and tests only; fragments/qr.typ and golden/valid/qr-badge are byte-identical to 466083631794bc87b4d25d60a0a1052fb333938e.
+
+AGENT-1921 (print option, lot G of AGENT-1584): fragments/print.typ and golden/valid/print-brochure
+source_commit: dbfa465a9ee4a7e07e7f51659c91b517817066e0 (pilote-maurice main, merge of !1019); fragments/print.typ and the golden are byte-identical to that commit
+the render option `print` and its TrimBox and BleedBox writing are specific to this engine (internal/template/print.go)

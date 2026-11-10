@@ -44,7 +44,7 @@ func logoFile(brand map[string]any, assets map[string][]byte) string {
 // brandTypst generates /brand.typ: the brand (reserved namespace `brand`) as
 // typed Typst values, for Typst code (set rules, colors). Texts go through
 // the template actions instead.
-func brandTypst(brand, doc map[string]any, logo string) (string, error) {
+func brandTypst(brand, doc map[string]any, logo string, po *PrintOptions) (string, error) {
 	colors, _ := brand["colors"].(map[string]any)
 	fonts, _ := brand["fonts"].(map[string]any)
 	page, _ := brand["page"].(map[string]any)
@@ -84,5 +84,10 @@ func brandTypst(brand, doc map[string]any, logo string) (string, error) {
 		locale = "fr"
 	}
 	fmt.Fprintf(&b, "#let locale = %s\n", typstString(locale))
+	// Written only when the print option is given: without it /brand.typ is
+	// byte-identical to the one of the versions before the option.
+	if po != nil {
+		b.WriteString(po.typst())
+	}
 	return b.String(), nil
 }

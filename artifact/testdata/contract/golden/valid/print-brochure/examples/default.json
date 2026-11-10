@@ -1,0 +1,20 @@
+{
+  "title": "Plaquette de présentation",
+  "subtitle": "Édition 2026",
+  "sections": [
+    {
+      "heading": "Notre démarche",
+      "paragraphs": [
+        "Un document imprimé se juge au bord de la page : un aplat de couleur doit déborder du format fini, pour qu'aucun liseré blanc n'apparaisse après la coupe.",
+        "Les marges intérieure et extérieure alternent d'une page à l'autre, pour que la reliure ne mange pas le texte."
+      ]
+    },
+    {
+      "heading": "Nos engagements",
+      "paragraphs": [
+        "Chaque page est livrée avec ses boîtes de format fini et de fond perdu, lisibles par le prépresse.",
+        "Les traits de coupe se trouvent hors de la zone finie, dans la marge de marque."
+      ]
+    }
+  ]
+}

@@ -42,6 +42,11 @@ const (
 	CodeQRInputTooLong = "qr_input_too_long"
 	CodeQRLevelInvalid = "qr_level_invalid"
 
+	// Print option (bleed, mirrored margins, crop marks; TrimBox and BleedBox).
+	CodePrintInvalid     = "print_invalid"
+	CodePrintUnsupported = "print_unsupported"
+	CodePrintBoxFailed   = "print_box_failed"
+
 	// Message profile (mjml engine; html, txt and eml outputs).
 	CodeMJMLFailed             = "mjml_failed"
 	CodeMJMLIncludeOutside     = "mjml_include_outside_fragments"

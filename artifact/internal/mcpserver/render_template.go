@@ -79,6 +79,21 @@ func (h *handlers) options() template.Options {
 	return o
 }
 
+// printSchema is the closed JSON Schema of the `print` option (pdf output of a template
+// that declares fragments/print.typ), published by the tool schema and by
+// artifact_capabilities_v1.
+func printSchema() map[string]interface{} {
+	return map[string]interface{}{
+		"type": []string{"object", "null"}, "additionalProperties": false,
+		"description": "Professional print layout (pdf output, template declaring fragments/print.typ): bleed, mirrored margins for double-sided printing, crop marks, and the PDF BleedBox and TrimBox. Absent or null: the render is unchanged.",
+		"properties": map[string]interface{}{
+			"bleed_mm":       map[string]interface{}{"type": "number", "minimum": 0, "maximum": template.PrintBleedMaxMM, "default": template.PrintBleedDefaultMM, "description": "Bleed in millimetres, 0 to 5."},
+			"mirror_margins": map[string]interface{}{"type": "boolean", "default": false, "description": "Inside and outside margins alternate with the page parity."},
+			"crop_marks":     map[string]interface{}{"type": "boolean", "default": false, "description": "Crop marks outside the finished area, in a 7 mm mark zone around the bleed."},
+		},
+	}
+}
+
 func obj(props map[string]interface{}) map[string]interface{} {
 	return map[string]interface{}{"type": "object", "properties": props}
 }
@@ -102,6 +117,7 @@ func renderSchema() mcp.ToolInputSchema {
 		"options":            map[string]interface{}{"type": "object", "description": "csv output only: separator, bom, line_ending, quote, expected_columns, expected_headers, neutralize_formulas."},
 		"mode":               map[string]interface{}{"type": "string", "enum": []string{"preview", "final"}, "default": "preview"},
 		"creation_timestamp": map[string]interface{}{"type": "integer", "description": "Fixed Unix timestamp; default is doc.date at 00:00 UTC."},
+		"print":              printSchema(),
 	}, nil)
 }
 
@@ -113,6 +129,7 @@ type renderInput struct {
 	Output    string            `json:"output"`
 	Mode      string            `json:"mode"`
 	Timestamp *int64            `json:"creation_timestamp"`
+	Print     json.RawMessage   `json:"print"`
 }
 
 type fileOut struct {
@@ -151,6 +168,14 @@ func (h *handlers) renderTemplate(ctx context.Context, request mcp.CallToolReque
 	if in.Output == "" {
 		return failure("invalid_arguments", "output is required (pdf, png, html, txt or eml)"), nil
 	}
+	printOpts, err := template.ParsePrint(in.Print)
+	if err != nil {
+		var terr *template.Error
+		if errors.As(err, &terr) {
+			return failure(terr.Code, terr.Message), nil
+		}
+		return failure("invalid_arguments", err.Error()), nil
+	}
 	assets := map[string][]byte{}
 	for name, enc := range in.Assets {
 		body, err := base64.StdEncoding.DecodeString(enc)
@@ -161,7 +186,7 @@ func (h *handlers) renderTemplate(ctx context.Context, request mcp.CallToolReque
 	}
 	res, err := template.Render(ctx, template.Request{
 		Template: in.Template, Data: in.Data, Context: in.Context, Assets: assets,
-		Output: in.Output, Mode: in.Mode, Timestamp: in.Timestamp,
+		Output: in.Output, Mode: in.Mode, Timestamp: in.Timestamp, Print: printOpts,
 	}, h.deps.Compiler, h.options())
 	if err != nil {
 		var terr *template.Error
@@ -281,6 +306,9 @@ func (h *handlers) capabilities(ctx context.Context, _ mcp.CallToolRequest) (*mc
 		"utility_outputs":   utilityCapabilities(),
 		"template_contract": "agentmaurice.template/v1",
 		"render_modes":      []string{template.ModePreview, template.ModeFinal},
+		// The print option of artifact_render_v1 (pdf output): closed schema, fragment a template must declare,
+		// and the boxes written into the PDF.
+		"print": map[string]interface{}{"outputs": []string{"pdf"}, "fragment": template.PrintFragment, "schema": printSchema(), "pdf_boxes": []string{"BleedBox", "TrimBox"}, "mark_zone_mm": template.PrintMarkZoneMM},
 		"limits": map[string]interface{}{
 			"max_inline_bytes": maxArtifactBytes, "max_request_bytes": maxRenderRequestBytes,
 			"max_template_bytes": opts.MaxTemplateBytes, "max_files": template.DefaultMaxFiles, "max_defines": template.DefaultMaxDefines, "max_schema_cost": template.MaxSchemaCost, "max_validation_work": template.MaxValidationWork, "max_output_bytes": template.DefaultMaxOutputBytes, "max_values_bytes": template.DefaultMaxValuesBytes, "max_pages": opts.MaxPages,
@@ -296,6 +324,7 @@ func (h *handlers) capabilities(ctx context.Context, _ mcp.CallToolRequest) (*mc
 			template.CodeMJMLFailed, template.CodeMJMLIncludeOutside, template.CodeMJMLIncludeDenied, template.CodeMessageOutputInvalid, template.CodeMessageTemplateResidue,
 			template.CodeMessageTooHeavy, template.CodeMessageURLNotHTTPS, template.CodeMessageUnsubscribeMiss, template.CodeMessageHiddenRule, template.CodeMessageReservedChar,
 			template.CodeQRInputInvalid, template.CodeQRInputTooLong, template.CodeQRLevelInvalid,
+			template.CodePrintInvalid, template.CodePrintUnsupported, template.CodePrintBoxFailed,
 			"invalid_arguments", "storage_required", "buffer_failed",
 			"invalid_artifact", "artifact_create_failed", "artifact_patch_failed", "artifact_render_failed", // v0.1 contract
 		},

@@ -73,6 +73,7 @@ type Request struct {
 	Output    string            // pdf, png, html, txt
 	Mode      string            // preview or final
 	Timestamp *int64            // optional fixed timestamp; default derived from doc.date
+	Print     *PrintOptions     // optional print layout (pdf output of a template that declares fragments/print.typ)
 }
 
 // Options bounds a render.
@@ -108,7 +109,10 @@ type Provenance struct {
 	Mode      string `json:"mode"`
 	Output    string `json:"output"`
 	Timestamp string `json:"timestamp"`
-	Pages     int    `json:"pages,omitempty"`
+	// Print echoes the print option; absent without it, so the provenance of a
+	// render without print is unchanged.
+	Print *PrintOptions `json:"print,omitempty"`
+	Pages int           `json:"pages,omitempty"`
 }
 
 // Page is one PNG preview.
@@ -205,6 +209,11 @@ func Render(ctx context.Context, req Request, compiler Compiler, opts Options) (
 	if req.Mode != ModePreview && req.Mode != ModeFinal {
 		return nil, errf(CodeInvalidModeOrOutput, "mode must be %q or %q", ModePreview, ModeFinal)
 	}
+	if req.Print != nil {
+		if err := req.Print.Validate(); err != nil {
+			return nil, err
+		}
+	}
 	if opts.Timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
@@ -231,6 +240,11 @@ func Render(ctx context.Context, req Request, compiler Compiler, opts Options) (
 	p, err := ValidateCtx(ctx, req.Template, req.Data, req.Output, opts.MaxTemplateBytes)
 	if err != nil {
 		return nil, err
+	}
+	if req.Print != nil {
+		if err := checkPrintSupport(p.Manifest.Source.Engine, req.Output, p.Fragments, p.Files[p.Entry]); err != nil {
+			return nil, err
+		}
 	}
 	ex, err := newExecutor(ctx, p.Manifest.Source.Engine, full, opts.MaxOutputBytes)
 	if err != nil {
@@ -324,7 +338,7 @@ func renderTypst(ctx context.Context, req Request, p *Prepared, ex *executor, en
 		return nil, errf(CodeEngineUnavailable, "no Typst engine is configured")
 	}
 	logo := logoFile(req.Context.Brand, req.Assets)
-	brandTyp, err := brandTypst(req.Context.Brand, req.Context.Doc, logo)
+	brandTyp, err := brandTypst(req.Context.Brand, req.Context.Doc, logo, req.Print)
 	if err != nil {
 		return nil, errf(CodeContextInvalid, "brand.typ: %v", err)
 	}
@@ -419,6 +433,37 @@ func renderTypst(ctx context.Context, req Request, p *Prepared, ex *executor, en
 		res.Content, err = os.ReadFile(filepath.Join(outDir, "out.pdf"))
 		if err != nil {
 			return nil, errf(CodeCompileFailed, "reading PDF: %v", err)
+		}
+		if req.Print != nil {
+			// Second PDF compile of the same project without print: the reference of the finished size,
+			// and the proof that the template applies print-layout.
+			plainTyp, err := brandTypst(req.Context.Brand, req.Context.Doc, logo, nil)
+			if err != nil {
+				return nil, errf(CodeContextInvalid, "brand.typ: %v", err)
+			}
+			if err := write("brand.typ", []byte(plainTyp)); err != nil {
+				return nil, errf(CodeCompileFailed, "writing brand.typ: %v", err)
+			}
+			if err := compiler.Compile(ctx, CompileRequest{Dir: dir, OutDir: outDir, Entry: p.Entry, Out: "plain.pdf", Format: "pdf", Timestamp: ts}); err != nil {
+				return nil, asEngineError(ctx, err)
+			}
+			if err := checkProducedSize(filepath.Join(outDir, "plain.pdf"), opts.MaxOutputBytes); err != nil {
+				return nil, err
+			}
+			plain, err := os.ReadFile(filepath.Join(outDir, "plain.pdf"))
+			if err != nil {
+				return nil, errf(CodeCompileFailed, "reading PDF: %v", err)
+			}
+			boxed, err := addPrintBoxes(res.Content, plain, *req.Print)
+			if err != nil {
+				return nil, err
+			}
+			if len(boxed) > opts.MaxOutputBytes {
+				return nil, errf(CodeLimitsExceeded, "compiled file out.pdf is %d bytes, above the %d byte output limit", len(boxed), opts.MaxOutputBytes)
+			}
+			res.Content = boxed
+			echo := *req.Print
+			res.Provenance.Print = &echo
 		}
 		res.Filename, res.MimeType = base+".pdf", "application/pdf"
 	case "png":
