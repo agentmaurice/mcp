@@ -1,0 +1,231 @@
+{
+  "title": "Tableau de bord Activité 2026",
+  "titles": {
+    "bar": "Résultat mensuel",
+    "line": "Tendance",
+    "pie": "Répartition du chiffre d'affaires",
+    "gantt": "Plan de projet",
+    "org": "Organisation",
+    "process": "Traitement d'une demande"
+  },
+  "bar": {
+    "type": "bar",
+    "categories": [
+      "janv.",
+      "févr.",
+      "mars",
+      "avr.",
+      "mai",
+      "juin"
+    ],
+    "series": [
+      {
+        "name": "Chiffre d'affaires (k€)",
+        "values": [
+          1250.5,
+          1380,
+          1520,
+          1475,
+          1680,
+          1904.25
+        ]
+      },
+      {
+        "name": "Résultat (k€)",
+        "values": [
+          220,
+          -150.5,
+          310,
+          -80,
+          405,
+          520
+        ]
+      }
+    ]
+  },
+  "line": {
+    "type": "line",
+    "categories": [
+      "janv.",
+      "févr.",
+      "mars",
+      "avr.",
+      "mai",
+      "juin"
+    ],
+    "series": [
+      {
+        "name": "Visites",
+        "values": [
+          12000,
+          13500,
+          15000,
+          14200,
+          16800,
+          19000
+        ]
+      },
+      {
+        "name": "Commandes",
+        "values": [
+          980,
+          1040,
+          1100,
+          1080,
+          1210,
+          1330
+        ]
+      }
+    ]
+  },
+  "pie": {
+    "type": "pie",
+    "parts": [
+      {
+        "name": "Conseil",
+        "value": 3800
+      },
+      {
+        "name": "Formation",
+        "value": 2400
+      },
+      {
+        "name": "Licences",
+        "value": 1700
+      },
+      {
+        "name": "Intégration",
+        "value": 1300
+      },
+      {
+        "name": "Support",
+        "value": 800
+      }
+    ]
+  },
+  "gantt": {
+    "type": "gantt",
+    "weeks": 12,
+    "phases": [
+      "Cadrage",
+      "Construction",
+      "Recette"
+    ],
+    "tasks": [
+      {
+        "name": "Cadrage du besoin",
+        "start": 0,
+        "duration": 2,
+        "phase": 0
+      },
+      {
+        "name": "Ateliers utilisateurs",
+        "start": 1,
+        "duration": 3,
+        "phase": 0
+      },
+      {
+        "name": "Socle technique",
+        "start": 3,
+        "duration": 4,
+        "phase": 1
+      },
+      {
+        "name": "Interfaces principales",
+        "start": 5,
+        "duration": 5,
+        "phase": 1
+      },
+      {
+        "name": "Recette métier",
+        "start": 9,
+        "duration": 2,
+        "phase": 2
+      },
+      {
+        "name": "Mise en production",
+        "start": 11,
+        "duration": 1,
+        "phase": 2
+      }
+    ]
+  },
+  "org": {
+    "type": "org",
+    "nodes": [
+      {
+        "id": "n1",
+        "name": "Hélène Marchand",
+        "title": "Directrice générale",
+        "parent": ""
+      },
+      {
+        "id": "n2",
+        "name": "Julien Bœuf",
+        "title": "Directeur technique",
+        "parent": "n1"
+      },
+      {
+        "id": "n3",
+        "name": "Camille Durand",
+        "title": "Directrice commerciale",
+        "parent": "n1"
+      },
+      {
+        "id": "n4",
+        "name": "Inès Garnier",
+        "title": "Développement",
+        "parent": "n2"
+      },
+      {
+        "id": "n5",
+        "name": "Théo Bernard",
+        "title": "Données",
+        "parent": "n2"
+      },
+      {
+        "id": "n6",
+        "name": "Maël Roche",
+        "title": "Grands comptes",
+        "parent": "n3"
+      }
+    ]
+  },
+  "process": {
+    "type": "process",
+    "steps": [
+      {
+        "label": "Demande reçue",
+        "kind": "start"
+      },
+      {
+        "label": "Qualification",
+        "kind": "step"
+      },
+      {
+        "label": "Dossier complet ?",
+        "kind": "decision"
+      },
+      {
+        "label": "Chiffrage",
+        "kind": "step"
+      },
+      {
+        "label": "Validation interne",
+        "kind": "step"
+      },
+      {
+        "label": "Envoi du devis",
+        "kind": "step"
+      },
+      {
+        "label": "Signature client",
+        "kind": "step"
+      },
+      {
+        "label": "Clôture",
+        "kind": "end"
+      }
+    ]
+  }
+}

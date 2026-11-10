@@ -1,5 +1,7 @@
-Vendored from pilote-maurice contracts/template/v1 (AGENT-1586), not yet merged on main when copied.
-source_worktree: _worktrees/pilote-maurice-agent-1586
-source_commit: 2f94c37667d43a7a2a5e9c7ee03c28f156f8741c (schemas and fragments unchanged since 0224b37; two golden/invalid cases added)
-files: manifest.schema.json namespaces.schema.json tokens.schema.json fragments/*.typ
+Vendored from pilote-maurice contracts/template/v1 (AGENT-1586, AGENT-1582 lot 2), not yet merged on main when copied.
+source_worktree: _worktrees/pilote-maurice-agent-1582 (branch claude/AGENT-1582-chart-contract)
+source_commit: ebbf0855f70eac610aca6f8d0307e583c671453e for chart.schema.json and fragments/charts.typ (new in AGENT-1582 lot 2)
+other_files: unchanged since 2f94c37667d43a7a2a5e9c7ee03c28f156f8741c (manifest.schema.json tokens.schema.json fragments/header.typ footer.typ legal-mentions.typ lines-table.typ)
+not_recopied: namespaces.schema.json (pilote main has the optional company.bank of AGENT-1575, not vendored here; out of scope of AGENT-1582)
+files: manifest.schema.json namespaces.schema.json tokens.schema.json chart.schema.json fragments/*.typ
 Update by copying again and bumping this PIN; do not edit the copies by hand.

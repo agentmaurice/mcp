@@ -42,6 +42,17 @@ has more fields (existing keys unchanged), and the input schema of
 `artifact_render_v1` lists the optional template arguments (no field is required
 by the schema any more; v0.1 arguments are still validated by the tool).
 
+## Chart fragments
+
+The template library embedded in the engine includes `fragments/charts.typ`: six
+pure-Typst chart fragments (`bar-chart`, `line-chart`, `pie-chart`, `gantt-chart`,
+`org-chart`, `process-flow`), with the data contract `chart.schema.json` (`chart/v1`).
+They draw vector graphics only, with the colours of the brand charter, French number
+formatting and bounded inputs: out-of-bounds data fails the render with a compile
+error whose message starts with `chart/v1:`. A template declares the fragment in
+`fragments` and passes the chart data as JSON inside a content block. The files are
+vendored from pilote-maurice `contracts/template/v1` (see `internal/template/contract/PIN`).
+
 ## Utility outputs: `ics`, `vcf`, `csv` (`artifact_render_v1`, no template)
 
 `artifact_render_v1` also renders typed business data to an iCalendar (RFC 5545),

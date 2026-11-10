@@ -1,0 +1,384 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Donnees metier du tableau de bord",
+  "description": "Un graphique par propriete, au format chart/v1 (`$defs` recopies de chart.schema.json).",
+  "type": "object",
+  "required": [
+    "title",
+    "titles",
+    "bar",
+    "line",
+    "pie",
+    "gantt",
+    "org",
+    "process"
+  ],
+  "properties": {
+    "title": {
+      "$ref": "#/$defs/label"
+    },
+    "titles": {
+      "type": "object",
+      "required": [
+        "bar",
+        "line",
+        "pie",
+        "gantt",
+        "org",
+        "process"
+      ],
+      "properties": {
+        "bar": {
+          "$ref": "#/$defs/label"
+        },
+        "line": {
+          "$ref": "#/$defs/label"
+        },
+        "pie": {
+          "$ref": "#/$defs/label"
+        },
+        "gantt": {
+          "$ref": "#/$defs/label"
+        },
+        "org": {
+          "$ref": "#/$defs/label"
+        },
+        "process": {
+          "$ref": "#/$defs/label"
+        }
+      }
+    },
+    "bar": {
+      "$ref": "#/$defs/bar"
+    },
+    "line": {
+      "$ref": "#/$defs/line"
+    },
+    "pie": {
+      "$ref": "#/$defs/pie"
+    },
+    "gantt": {
+      "$ref": "#/$defs/gantt"
+    },
+    "org": {
+      "$ref": "#/$defs/org"
+    },
+    "process": {
+      "$ref": "#/$defs/process"
+    }
+  },
+  "$defs": {
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60,
+      "pattern": "^[^\\x00-\\x1F\\x7F]+$",
+      "description": "Une ligne de texte : ni saut de ligne ni autre caractere de controle."
+    },
+    "number": {
+      "type": "number",
+      "minimum": -1000000000000,
+      "maximum": 1000000000000,
+      "anyOf": [
+        {
+          "const": 0
+        },
+        {
+          "minimum": 0.01
+        },
+        {
+          "maximum": -0.01
+        }
+      ],
+      "description": "0, ou valeur absolue d'au moins 0.01 (precision affichee) ; au plus 1e12."
+    },
+    "bar": {
+      "description": "Barres groupees (une serie = une couleur), valeurs negatives sous l'axe zero. Chaque serie a autant de valeurs que de categories (controle du fragment).",
+      "type": "object",
+      "required": [
+        "type",
+        "categories",
+        "series"
+      ],
+      "properties": {
+        "type": {
+          "const": "bar"
+        },
+        "categories": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 24,
+          "items": {
+            "$ref": "#/$defs/label"
+          }
+        },
+        "series": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "values"
+            ],
+            "properties": {
+              "name": {
+                "$ref": "#/$defs/label"
+              },
+              "values": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 24,
+                "items": {
+                  "$ref": "#/$defs/number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "line": {
+      "description": "Lignes (une serie = une couleur). Chaque serie a autant de valeurs que de categories (controle du fragment).",
+      "type": "object",
+      "required": [
+        "type",
+        "categories",
+        "series"
+      ],
+      "properties": {
+        "type": {
+          "const": "line"
+        },
+        "categories": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 24,
+          "items": {
+            "$ref": "#/$defs/label"
+          }
+        },
+        "series": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "values"
+            ],
+            "properties": {
+              "name": {
+                "$ref": "#/$defs/label"
+              },
+              "values": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 24,
+                "items": {
+                  "$ref": "#/$defs/number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "pie": {
+      "description": "Camembert : les parts sont calculees depuis les valeurs (valeur / somme). La somme doit etre strictement positive (controle du fragment).",
+      "type": "object",
+      "required": [
+        "type",
+        "parts"
+      ],
+      "properties": {
+        "type": {
+          "const": "pie"
+        },
+        "parts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "value"
+            ],
+            "properties": {
+              "name": {
+                "$ref": "#/$defs/label"
+              },
+              "value": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1000000000000,
+                "anyOf": [
+                  {
+                    "const": 0
+                  },
+                  {
+                    "minimum": 0.01
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "gantt": {
+      "description": "Gantt en semaines depuis la semaine 0. `phase` est un indice dans `phases`, start + duration <= weeks (controles du fragment).",
+      "type": "object",
+      "required": [
+        "type",
+        "weeks",
+        "phases",
+        "tasks"
+      ],
+      "properties": {
+        "type": {
+          "const": "gantt"
+        },
+        "weeks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 104
+        },
+        "phases": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/label"
+          }
+        },
+        "tasks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 25,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "start",
+              "duration",
+              "phase"
+            ],
+            "properties": {
+              "name": {
+                "$ref": "#/$defs/label"
+              },
+              "start": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 104,
+                "anyOf": [
+                  {
+                    "const": 0
+                  },
+                  {
+                    "minimum": 0.01
+                  }
+                ]
+              },
+              "duration": {
+                "type": "number",
+                "minimum": 0.01,
+                "maximum": 104
+              },
+              "phase": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4
+              }
+            }
+          }
+        }
+      }
+    },
+    "org": {
+      "description": "Organigramme : un seul noeud racine (parent vide), ids uniques, parents existants, profondeur et nombre de feuilles bornes par le fragment (max-org-depth, max-org-leaves).",
+      "type": "object",
+      "required": [
+        "type",
+        "nodes"
+      ],
+      "properties": {
+        "type": {
+          "const": "org"
+        },
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 30,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "parent"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "name": {
+                "$ref": "#/$defs/label"
+              },
+              "title": {
+                "$ref": "#/$defs/label"
+              },
+              "parent": {
+                "type": "string",
+                "maxLength": 32
+              }
+            }
+          }
+        }
+      }
+    },
+    "process": {
+      "description": "Processus sur plusieurs lignes, chacune lue de gauche a droite avec un connecteur de retour (pas un serpentin) ; le nombre d'etapes par ligne est calcule.",
+      "type": "object",
+      "required": [
+        "type",
+        "steps"
+      ],
+      "properties": {
+        "type": {
+          "const": "process"
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "kind"
+            ],
+            "properties": {
+              "label": {
+                "$ref": "#/$defs/label"
+              },
+              "kind": {
+                "enum": [
+                  "start",
+                  "step",
+                  "decision",
+                  "end"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

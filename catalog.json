@@ -1,6 +1,6 @@
 {
   "schema_version": "agentmaurice.mcp-catalog/v1",
-  "generated_at": "2026-11-09T07:11:37Z",
+  "generated_at": "2026-11-10T05:49:35Z",
   "repository": "https://github.com/agentmaurice/mcp",
   "registry": "ghcr.io/agentmaurice/mcp",
   "servers": [
@@ -53,20 +53,20 @@
     {
       "slug": "artifact",
       "kind": "server",
-      "version": "v0.2.4",
-      "commit": "0b043f3a42e87204c54d3042f10993d208fc847f",
+      "version": "v0.2.5",
+      "commit": "57bbc6f4254994c4c3bc6715d8898fbf80c08534",
       "description": "Go MCP server for creating, patching, rendering and inspecting deterministic deliverables. Every result carries a provenance manifest with format, MIME type, size, renderer and SHA-256. Version 0.2.0 adds the rendering engine of Document studio: it renders `template/v1` folders to PDF, PNG, HTML or text.",
       "sidecar_compatible": true,
       "one_compatible": true,
       "one_notes": null,
       "requires": [],
-      "install_image": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.2.4@sha256:550cb5ca1f6e135a0b6c4e7d2f6c26cd97e793d4b6370b63b40cd2a9554ba1d1",
+      "install_image": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.2.5@sha256:c3ec54ca5581d0eda68da876df819754ae93bc6c50d7e51ed3df32818579854f",
       "images": [
         {
           "name": "artifact-sidecar",
-          "ref": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.2.4@sha256:550cb5ca1f6e135a0b6c4e7d2f6c26cd97e793d4b6370b63b40cd2a9554ba1d1",
+          "ref": "ghcr.io/agentmaurice/mcp/artifact-sidecar:v0.2.5@sha256:c3ec54ca5581d0eda68da876df819754ae93bc6c50d7e51ed3df32818579854f",
           "role": "sidecar",
-          "digest": "sha256:550cb5ca1f6e135a0b6c4e7d2f6c26cd97e793d4b6370b63b40cd2a9554ba1d1"
+          "digest": "sha256:c3ec54ca5581d0eda68da876df819754ae93bc6c50d7e51ed3df32818579854f"
         }
       ],
       "tools": [

@@ -1,0 +1,34 @@
+{
+  "schema": "agentmaurice.template/v1",
+  "key": "dashboard",
+  "version": "1.0.0",
+  "title": "Tableau de bord",
+  "description": "Six graphiques deterministes (barres, lignes, camembert, Gantt, organigramme, processus) a partir de donnees chart/v1.",
+  "kind": "document",
+  "profile": "document",
+  "source": {
+    "engine": "typst",
+    "entry": "main.typ"
+  },
+  "outputs": [
+    "pdf"
+  ],
+  "locales": [
+    "fr"
+  ],
+  "default_locale": "fr",
+  "input_schema": "input.schema.json",
+  "examples": [
+    {
+      "name": "default",
+      "data": "examples/default.json"
+    }
+  ],
+  "fragments": [
+    "fragments/charts.typ"
+  ],
+  "limits": {
+    "max_source_bytes": 20000,
+    "max_pages": 6
+  }
+}
