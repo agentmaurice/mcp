@@ -1,0 +1,6 @@
+{
+  "title": "Facture FA-2026-0042",
+  "reference": "FA-2026-0042",
+  "payment_url": "https://pay.example.com/i/FA-2026-0042?amount=1250.00&cur=EUR&sig=3f9c1a",
+  "caption": "Scannez pour payer"
+}

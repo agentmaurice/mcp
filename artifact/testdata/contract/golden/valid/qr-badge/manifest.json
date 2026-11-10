@@ -1,0 +1,38 @@
+{
+  "schema": "agentmaurice.template/v1",
+  "key": "qr-badge",
+  "version": "1.0.0",
+  "title": "Badge avec QR code",
+  "description": "Un badge d'une page : titre, référence et QR code déterministe (contrat qr/v1) d'un lien de paiement, aux quatre niveaux de correction.",
+  "kind": "document",
+  "profile": "document",
+  "source": {
+    "engine": "typst",
+    "entry": "main.typ"
+  },
+  "outputs": [
+    "pdf"
+  ],
+  "locales": [
+    "fr"
+  ],
+  "default_locale": "fr",
+  "input_schema": "input.schema.json",
+  "examples": [
+    {
+      "name": "default",
+      "data": "examples/default.json"
+    },
+    {
+      "name": "accents",
+      "data": "examples/accents.json"
+    }
+  ],
+  "fragments": [
+    "fragments/qr.typ"
+  ],
+  "limits": {
+    "max_source_bytes": 20000,
+    "max_pages": 1
+  }
+}

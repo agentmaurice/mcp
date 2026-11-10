@@ -6,6 +6,7 @@ toolchain go1.26.0
 
 require (
 	github.com/agentmaurice/mcpchatui/mcp/shared v0.0.0
+	github.com/makiuchi-d/gozxing v0.1.1
 	github.com/mark3labs/mcp-go v1.1.1
 )
 
@@ -24,6 +25,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.45.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260803160001-6ac0973c030d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260803160001-6ac0973c030d // indirect
 	google.golang.org/grpc v1.83.0 // indirect

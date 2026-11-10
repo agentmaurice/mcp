@@ -12,3 +12,6 @@ commit ebbf0855f70eac610aca6f8d0307e583c671453e of the worktree `pilote-maurice-
 `message_*` strings added to `golden/context/i18n.fr.json` are copied unchanged from commit
 9f3a8adbcdabbc57bebf7cc944f49ce8839efec4 of the worktree `pilote-maurice-agent-1614` (not yet merged
 when copied). `golden/context/company.example.json` is not recopied (see `internal/template/contract/PIN`).
+
+`golden/valid/qr-badge` (qr/v1 QR codes, AGENT-1919) is copied unchanged from commit
+466083631794bc87b4d25d60a0a1052fb333938e of pilote-maurice main (merge of !1017).

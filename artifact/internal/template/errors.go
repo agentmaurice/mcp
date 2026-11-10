@@ -37,6 +37,11 @@ const (
 	CodeFileExtension       = "file_extension_forbidden"
 	CodeInvalidModeOrOutput = "invalid_arguments"
 
+	// QR codes (qrModules template function, contract qr/v1).
+	CodeQRInputInvalid = "qr_input_invalid"
+	CodeQRInputTooLong = "qr_input_too_long"
+	CodeQRLevelInvalid = "qr_level_invalid"
+
 	// Message profile (mjml engine; html, txt and eml outputs).
 	CodeMJMLFailed             = "mjml_failed"
 	CodeMJMLIncludeOutside     = "mjml_include_outside_fragments"

@@ -69,8 +69,48 @@ func funcMap() template.FuncMap {
 			b, err := json.MarshalIndent(v, "", "  ")
 			return string(b), err
 		},
-		"now": func() string { return time.Now().UTC().Format(time.RFC3339) },
+		"now":       func() string { return time.Now().UTC().Format(time.RFC3339) },
+		"qrModules": qrModules,
 	}
+}
+
+// qrModules is the template function `qrModules text [level]` (contract qr/v1): the
+// module matrix of the QR code of text (UTF-8 bytes, byte mode, smallest version),
+// as rows of `1` (dark) and `0` (light) separated by `/`. level is L, M, Q or H
+// (default M). Deterministic. Empty or absent text, more than qrMaxInputBytes bytes
+// and an unknown level are render errors with a stable code.
+func qrModules(v any, level ...string) (string, error) {
+	lv := "M"
+	if len(level) > 1 {
+		return "", errf(CodeQRLevelInvalid, "qrModules takes at most one level, got %d", len(level))
+	}
+	if len(level) == 1 {
+		lv = level[0]
+	}
+	ecl, ok := qrParseLevel(lv)
+	if !ok {
+		return "", errf(CodeQRLevelInvalid, "qrModules level must be L, M, Q or H, got %q", lv)
+	}
+	var text string
+	switch x := v.(type) {
+	case string:
+		text = x
+	case markedString:
+		text = string(x)
+	default:
+		return "", errf(CodeQRInputInvalid, "qrModules needs a text, got %T", v)
+	}
+	if text == "" {
+		return "", errf(CodeQRInputInvalid, "qrModules needs a non-empty text")
+	}
+	if len(text) > qrMaxInputBytes {
+		return "", errf(CodeQRInputTooLong, "qrModules text is %d bytes, the limit is %d", len(text), qrMaxInputBytes)
+	}
+	m, _, err := qrEncode([]byte(text), ecl)
+	if err != nil {
+		return "", errf(CodeQRInputTooLong, "qrModules: %v", err)
+	}
+	return qrMatrixText(m), nil
 }
 
 func isZero(v any) bool {
@@ -633,6 +673,17 @@ func (e *executor) funcs() template.FuncMap {
 			return "", errOutputLimit
 		}
 		out, err := baseJSON(v)
+		if err != nil {
+			return "", err
+		}
+		return checked(out)
+	}
+	baseQR := m["qrModules"].(func(any, ...string) (string, error))
+	m["qrModules"] = func(v any, level ...string) (string, error) {
+		if err := e.checkTick(); err != nil {
+			return "", err
+		}
+		out, err := baseQR(v, level...)
 		if err != nil {
 			return "", err
 		}

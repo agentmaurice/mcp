@@ -17,7 +17,7 @@ Last sync: 2026-11-10.
 | Server | Version | Container images | Description |
 |--------|---------|------------------|-------------|
 | [api](api) | v0.1.5 | `ghcr.io/agentmaurice/mcp/api*:v0.1.5` | Contract-first HTTP API calls through approved OpenAPI operation identifiers and bounded egress controls. |
-| [artifact](artifact) | v0.2.7 | `ghcr.io/agentmaurice/mcp/artifact*:v0.2.7` | Deterministic creation, patching, rendering and inspection of bounded business artifacts. |
+| [artifact](artifact) | v0.2.8 | `ghcr.io/agentmaurice/mcp/artifact*:v0.2.8` | Deterministic creation, patching, rendering and inspection of bounded business artifacts. |
 | [brain](brain) | v1.3.1 | `ghcr.io/agentmaurice/mcp/brain*:v1.3.1` | Go MCP server that indexes an organization's knowledge (code, documentation, |
 | [browser](browser) | v1.0.30 | `ghcr.io/agentmaurice/mcp/browser*:v1.0.30` | A Model Context Protocol (MCP) server for browser automation, built in Go. This server enables AI agents to control a web browser through a  |
 | [cms](cms) | v0.1.1 | `ghcr.io/agentmaurice/mcp/cms*:v0.1.1` | Go MCP server that creates, updates, schedules and unpublishes posts and pages, |

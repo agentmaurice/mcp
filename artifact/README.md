@@ -53,6 +53,41 @@ error whose message starts with `chart/v1:`. A template declares the fragment in
 `fragments` and passes the chart data as JSON inside a content block. The files are
 vendored from pilote-maurice `contracts/template/v1` (see `internal/template/contract/PIN`).
 
+## QR codes: `qrModules` and `fragments/qr.typ`
+
+Templates can print a deterministic QR code (contract `qr/v1`) with no package, plugin
+or image. The engine encodes in Go, the fragment draws in pure Typst:
+
+```
+#import "/fragments/qr.typ": qr-code
+#qr-code([{{ qrModules .data.payment_url "M" }}], size: 25mm)
+```
+
+- `qrModules text [level]` is a template function. It encodes the UTF-8 bytes of `text`
+  (byte mode) in the smallest QR version that holds them, with the error correction
+  level `L`, `M`, `Q` or `H` (upper case, default `M`) and the mask of lowest penalty (the
+  first one on ties). If the text holds a byte outside ASCII, an ECI segment (designator 26, UTF-8; 12 bits) precedes the byte segment, so a reader that defaults to ISO-8859-1 still reads the UTF-8; pure ASCII has no ECI. The same text and level always give the same matrix. It returns the
+  module matrix as plain text: one row per line of `1` (dark) and `0` (light) characters,
+  rows separated by `/`, no trailing separator. That text goes through the normal Typst
+  escaping of the engine (passed by reference, never raw): put it inside a content block
+  `[...]`, not inside a string (`typst_code_context`).
+- `qr-code(matrix, size: 30mm)` (`fragments/qr.typ`, declared in `fragments`) validates the
+  matrix (square, 21 + 4k modules up to 117, characters `0` and `1` only; otherwise the
+  compile error message starts with `qr/v1:`), adds a 4-module quiet zone and draws the dark
+  modules in the darkest colour of `brand.colors` on white. `size` is the side of the whole
+  square, quiet zone included.
+- Bounds: 1 to 512 bytes of UTF-8 text (an accented letter counts 2 or 3 bytes), QR version
+  25 at most (117 x 117 modules, what 512 bytes need at level H, with or without the ECI: its 12 bits fit in the margin of version 25, so the 512-byte bound is unchanged). Render error codes:
+  `qr_input_invalid` (empty text, or a text argument that is not a string), `qr_input_too_long` (more than 512 bytes),
+  `qr_level_invalid` (a level string other than `L`, `M`, `Q`, `H`, or more than one level),
+  all listed in `artifact_capabilities_v1`. A level argument that is not a string (`{{ qrModules "a" 12 }}`) and an absent or `null`
+  value fail with `template_exec` (the `text/template` call error or the absent-value guard),
+  before `qrModules` runs.
+
+The encoder is the standard library only (`internal/template/qr.go`, no QR dependency). Its
+matrices are decoded back by an independent ZXing port (`github.com/makiuchi-d/gozxing`, MIT,
+test dependency only) for every length from 1 to 512 bytes at the four levels.
+
 ## Utility outputs: `ics`, `vcf`, `csv` (`artifact_render_v1`, no template)
 
 `artifact_render_v1` also renders typed business data to an iCalendar (RFC 5545),
@@ -306,7 +341,7 @@ Failures return `isError` with a stable `error` code: `invalid_arguments`,
 `manifest_schema`, `file_path_invalid`, `entry_missing`, `input_schema_missing`,
 `input_schema_invalid`, `reserved_namespace`, `data_invalid`, `context_invalid`,
 `forbidden_function`, `unknown_function`, `template_syntax`, `template_exec`,
-`typst_code_context`, `typst_raw_context`, `typst_math_context`, `typst_comment_context`, `package_import_forbidden`, `fragment_undeclared`,
+`typst_code_context`, `typst_raw_context`, `typst_math_context`, `typst_comment_context`, `qr_input_invalid`, `qr_input_too_long`, `qr_level_invalid`, `package_import_forbidden`, `fragment_undeclared`,
 `fragment_missing`, `engine_unsupported`, `output_unsupported`, `limits_exceeded`,
 `engine_unavailable`, `engine_version_mismatch`, `compile_failed`, `mjml_failed`,
 `mjml_include_outside_fragments`, `mjml_include_denied`, `message_output_invalid`,

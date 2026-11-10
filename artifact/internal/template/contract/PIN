@@ -9,3 +9,9 @@ Update by copying again and bumping this PIN; do not edit the copies by hand.
 AGENT-1614 lot 3 (message profile, mjml engine): manifest.schema.json (message.category) and fragments/message/*.mjml
 source_commit: e2d122e7f5159beca370a83166894dac383f84e9 (pilote-maurice main, merge of !1014, AGENT-1614 lot 2); files byte-identical to that commit
 the other vendored files are unchanged by lot 2; namespaces.schema.json is still not recopied (see not_recopied above)
+
+AGENT-1919 (qr/v1, lot B of AGENT-1584): fragments/qr.typ
+source_commit: 466083631794bc87b4d25d60a0a1052fb333938e (pilote-maurice main, merge of !1017); fragments/qr.typ byte-identical to that commit
+the other vendored files are unchanged by this lot
+
+AGENT-1919 (ECI 26 for non-ASCII QR text): contract commit e07e1604961ddaf3821bad29574b9f822f5b1a4f (pilote-maurice main, merge of !1018); the QR encoder of render_reference is byte-identical to internal/template/qr.go. It changes the reference renderer, README and tests only; fragments/qr.typ and golden/valid/qr-badge are byte-identical to 466083631794bc87b4d25d60a0a1052fb333938e.

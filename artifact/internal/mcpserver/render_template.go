@@ -295,6 +295,7 @@ func (h *handlers) capabilities(ctx context.Context, _ mcp.CallToolRequest) (*mc
 			template.CodeRenderTimeout, template.CodeEngineUnavailable, template.CodeEngineVersion, template.CodeAssetInvalid, template.CodeReservedFileName, template.CodeFileExtension,
 			template.CodeMJMLFailed, template.CodeMJMLIncludeOutside, template.CodeMJMLIncludeDenied, template.CodeMessageOutputInvalid, template.CodeMessageTemplateResidue,
 			template.CodeMessageTooHeavy, template.CodeMessageURLNotHTTPS, template.CodeMessageUnsubscribeMiss, template.CodeMessageHiddenRule, template.CodeMessageReservedChar,
+			template.CodeQRInputInvalid, template.CodeQRInputTooLong, template.CodeQRLevelInvalid,
 			"invalid_arguments", "storage_required", "buffer_failed",
 			"invalid_artifact", "artifact_create_failed", "artifact_patch_failed", "artifact_render_failed", // v0.1 contract
 		},

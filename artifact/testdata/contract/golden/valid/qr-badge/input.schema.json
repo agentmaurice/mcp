@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Donnees metier du badge",
+  "description": "Le texte du QR code est encode tel quel (octets UTF-8, 512 octets au plus : voir README § QR codes).",
+  "type": "object",
+  "required": [
+    "title",
+    "reference",
+    "payment_url"
+  ],
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "reference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "payment_url": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 400,
+      "description": "Lien encode dans le QR code."
+    },
+    "caption": {
+      "type": "string",
+      "maxLength": 120
+    }
+  }
+}
