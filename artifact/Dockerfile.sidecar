@@ -37,6 +37,15 @@ RUN set -eu; \
     mkdir -p /usr/share/doc/typst; \
     cp "/tmp/typst-${triple}/LICENSE" "/tmp/typst-${triple}/NOTICE" /usr/share/doc/typst/
 
+# MJML 5.4.1 (bench AGENT-1614): the Node binary of this pinned official image, and
+# node_modules installed from the committed lockfile (docker/mjml). The network is
+# used here, at build time only; scripts of dependencies never run.
+FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS mjml
+WORKDIR /opt/mjml
+COPY artifact/docker/mjml/package.json artifact/docker/mjml/package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+COPY artifact/docker/mjml/render.mjs ./
+
 FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818
 
 # fonts-liberation2: free fonts (Arial/Helvetica metrics) next to Typst's embedded
@@ -52,6 +61,11 @@ COPY --chmod=755 --from=builder /out/artifact /usr/local/bin/artifact
 COPY --chmod=755 --from=builder /src/mcp/artifact/docker/run-artifact-stdio.sh /usr/local/bin/run-artifact-stdio.sh
 COPY --chmod=755 --from=typst /usr/local/bin/typst /usr/local/bin/typst
 COPY --from=typst /usr/share/doc/typst /usr/share/doc/typst
+# Node (same Debian release as this base: libstdc++ and glibc match) and MJML, with their licenses.
+COPY --chmod=755 --from=mjml /usr/local/bin/node /usr/local/bin/node
+COPY --from=mjml /usr/local/LICENSE /usr/share/doc/node/LICENSE
+COPY --from=mjml /opt/mjml /opt/mjml
+COPY --from=mjml /opt/mjml/node_modules/mjml/LICENSE.md /usr/share/doc/mjml/LICENSE.md
 COPY --chmod=755 --from=sidecar /usr/local/bin/mcp_sidecar /usr/local/bin/mcp-sidecar
 
 WORKDIR /app
@@ -59,6 +73,8 @@ USER app
 
 ENV TMPDIR=/tmp
 ENV TYPST_BIN=/usr/local/bin/typst
+ENV MJML_NODE_BIN=/usr/local/bin/node
+ENV MJML_DIR=/opt/mjml
 ENV ARTIFACT_FONT_PATH=/usr/share/fonts/truetype/liberation2
 ENV MCP_CREDENTIALS_PATH=/var/mcp/credentials/credentials.json
 ENV MCP_SIDECAR_CREDENTIALS_PATH=/var/mcp/credentials

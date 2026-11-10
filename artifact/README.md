@@ -16,7 +16,7 @@ Tools:
 
 v0.1 creates Markdown, HTML, CSV, JSON and PDF, and renders a simple PDF
 preview. Inline artifacts are capped at 2 MiB. The DOCX, XLSX and PPTX
-formats, MJML, Kroki and pdfcpu are out of scope for 0.2.
+formats, Kroki and pdfcpu are out of scope for 0.2.
 
 ## Rendering templates (`artifact_render_v1`)
 
@@ -91,7 +91,8 @@ is folded at 75 octets with CRLF, without splitting a UTF-8 sequence. Bounds:
 500 events or cards, 100 attendees per event, 32 KiB per text field or CSV cell,
 50 000 CSV rows, 256 columns, 8 MiB of output (these bounds apply to `artifact_render_v1` only) (2 MiB inline without Buffer).
 
-Engines: **Typst 0.15.1** (`pdf`, `png`; the version is enforced), `html`
+Engines: **Typst 0.15.1** (`pdf`, `png`; the version is enforced), **MJML 5.4.1**
+(`html`, `txt`, `eml`; message profile, see below), `html`
 (`html/template`, contextual escaping) and `text` (`txt`). Typst packages
 (`@preview/...`) are not supported in v0.2: any string literal that looks like a
 package specification (`"@name/..."`) is refused (`package_import_forbidden`), and
@@ -237,6 +238,68 @@ condition are checked like everywhere else (`not`, `eq`, `and`, ... included): `
 with `template_exec` when `flag` is absent, because `eq` would receive nil. Use
 `{{ if .data.flag }}` (or guard with `default`) instead.
 
+### Message profile: the `mjml` engine (e-mail)
+
+A template with `source.engine` `mjml` (kind and profile `message`, see the
+contract) renders to `html`, `txt` or `eml`. Nothing is ever sent: the outputs
+are files, with no recipient, date or message identifier.
+
+1. The entry and the declared fragments (`fragments/message/*.mjml` of the
+   vendored library) are executed with the Go template syntax, values escaped
+   like `html/template` (a value is text, never markup: `<b>` and `{{ 1+1 }}`
+   in data are shown as typed).
+2. The resolved files are written to a temporary working directory and compiled
+   by MJML 5.4.1 (`node render.mjs`): strict validation, `mj-include` enabled
+   and bounded to that directory, no minification. An `mj-include` that does not
+   target a declared `fragments/message/*.mjml` is refused before MJML runs
+   (`mjml_include_outside_fragments`; `fragment_undeclared` when it is a library
+   fragment the manifest does not declare). The sub-process gets an empty
+   environment with dead proxies, a time limit, a heap limit and a bounded output,
+   and Node's permission model limits it to reading the engine folder and the
+   working directory (no child process). MJML makes no network call; the process
+   is not isolated from the network at kernel level.
+3. Before MJML, the entry and the fragments are executed a second time against
+   the very same data (same branches), with every value marked between two
+   private-use characters (U+E000, U+E001, raw or percent-encoded in a URL). The
+   marked zones are removed and any template brace left (`{{`, `}}`) was written
+   by the template itself, not by a value: `message_template_residue`. Data that
+   hold U+E000 or U+E001 are refused (`message_reserved_character`). An emission
+   through `html` with arguments (`{{ html .data.x }}`) is not marked: braces in
+   such a value count as the template's.
+4. The HTML is checked, whatever the output asked: a document is produced
+   (`message_output_invalid`); no `mj-include denied` comment
+   (`mjml_include_denied`); under 102 KiB (`message_html_too_heavy`);
+   every `href`, `src` and `background` (attribute, conditional comment) and every
+   URL of the CSS (`url()`, `image-set()`, `@import`; comments removed and escapes
+   such as `u\72l(` decoded first, in `<style>` blocks, `style` attributes and
+   conditional comments) is an absolute `https://` URL, `srcset` is refused
+   (`message_url_not_https`); and when the manifest says
+   `message.category` `marketing`, the HTML holds an `<a href>` equal to
+   `data.unsubscribe_url` (scheme and host case-insensitive, default port ignored,
+   the rest compared byte for byte, so `a%2Fb` is not `a/b`;
+   `message_unsubscribe_missing`). MJML refusing the document returns
+   `mjml_failed` with its validation errors; no engine returns `engine_unavailable`.
+5. `txt` is derived from the final HTML: `head`, `style`, comments and hidden
+   elements are dropped. Hidden means the `hidden` attribute, or a declaration
+   `display:none`, `visibility:hidden`, `mso-hide:all`, `opacity:0`, or
+   `max-height`, `font-size` or `line-height` at 0 with `overflow:hidden` (the
+   preheader), in the inline style or in a `<style>` rule outside `@media` whose
+   selector is simple (`.class`, `element.class`, `element`, `#id`, lists of them).
+   A hiding rule with another selector (descendant, attribute, pseudo-class,
+   nesting) makes `txt` and `eml` fail with `message_hidden_rule_unsupported`
+   rather than risk leaking hidden text (`html` still renders). A link is written
+   `label (url)`, an image `[alt]`, lists are numbered, entities are decoded,
+   invisible padding is removed.
+6. `eml` is a `multipart/alternative` message: the text part, then the HTML part,
+   both UTF-8 and quoted-printable (readable and diffable, a few percent larger
+   where base64 adds a third), CRLF line ends, and a boundary derived from the
+   content. `Subject` is written (RFC 2047 when needed) only if `data.subject` is
+   a string. Same inputs, same bytes.
+
+The image ships the Node binary of a pinned official image and MJML installed
+from the committed lockfile (`docker/mjml`, `npm ci --omit=dev --ignore-scripts`),
+with the Node and MJML licenses under `/usr/share/doc/node` and `/usr/share/doc/mjml`.
+
 ### Errors
 
 Failures return `isError` with a stable `error` code: `invalid_arguments`,
@@ -245,17 +308,21 @@ Failures return `isError` with a stable `error` code: `invalid_arguments`,
 `forbidden_function`, `unknown_function`, `template_syntax`, `template_exec`,
 `typst_code_context`, `typst_raw_context`, `typst_math_context`, `typst_comment_context`, `package_import_forbidden`, `fragment_undeclared`,
 `fragment_missing`, `engine_unsupported`, `output_unsupported`, `limits_exceeded`,
-`engine_unavailable`, `engine_version_mismatch`, `compile_failed`,
-`render_timeout`, `asset_invalid`, `reserved_file_name`, `file_extension_forbidden`, `storage_required`, `buffer_failed`.
+`engine_unavailable`, `engine_version_mismatch`, `compile_failed`, `mjml_failed`,
+`mjml_include_outside_fragments`, `mjml_include_denied`, `message_output_invalid`,
+`message_template_residue`, `message_reserved_character`, `message_hidden_rule_unsupported`, `message_html_too_heavy`, `message_url_not_https`,
+`message_unsubscribe_missing`, `render_timeout`, `asset_invalid`, `reserved_file_name`, `file_extension_forbidden`, `storage_required`, `buffer_failed`.
 
 ### Limits and configuration
 
 | Variable | Default | Role |
 | --- | ---: | --- |
 | `TYPST_BIN` | `typst` in `PATH` | Typst 0.15.1 binary (the image sets it) |
+| `MJML_NODE_BIN` | `node` in `PATH` | Node binary that runs MJML (the image sets it) |
+| `MJML_DIR` | none | folder holding `render.mjs` and `node_modules` with MJML 5.4.1 (the image sets it) |
 | `ARTIFACT_FONT_PATH` | empty | extra free fonts directory (the image sets Liberation) |
 | `ARTIFACT_RENDER_TIMEOUT_SECONDS` | `60` | total time of one render |
-| `ARTIFACT_RENDER_MAX_MEMORY_MB` | none | address space limit per compilation (Linux) |
+| `ARTIFACT_RENDER_MAX_MEMORY_MB` | none (MJML: 512) | address space limit per Typst compilation (Linux); V8 heap limit of the MJML process |
 | `ARTIFACT_MAX_PAGES` | `50` | pages (the manifest `limits.max_pages` can lower it) |
 | `ARTIFACT_MAX_TEMPLATE_BYTES` | `1048576` | size of manifest and files; the manifest `limits.max_source_bytes` bounds the entry |
 | `ARTIFACT_BUFFER_SERVICE_URL`, `ARTIFACT_BUFFER_TOKEN` | none | Buffer service endpoint and bearer token |
@@ -279,6 +346,11 @@ Typst fragments, with a `PIN` of their origin. `testdata/contract/` holds the
 golden fixtures. Update them by copying again and bumping the PIN.
 
 ## Tests
+
+The message tests need MJML 5.4.1: `MJML_NODE_BIN` with `MJML_DIR`, else a Node
+in `PATH`, with MJML installed by `npm ci` from `docker/mjml` into a temporary folder
+(network needed once). Without an engine they are skipped locally and fail when
+`CI` or `ARTIFACT_REQUIRE_MJML=1` is set.
 
 `go test ./...` renders the contract goldens with a real Typst 0.15.1 found in
 `TYPST_BIN`, then in `PATH`, then through Docker with the public image

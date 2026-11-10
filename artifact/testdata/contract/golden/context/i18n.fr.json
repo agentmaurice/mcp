@@ -30,6 +30,9 @@
     "minutes_actions": "Actions",
     "minutes_col_action": "Action",
     "minutes_col_owner": "Responsable",
-    "minutes_col_due": "Échéance"
+    "minutes_col_due": "Échéance",
+    "message_greeting": "Bonjour",
+    "message_regards": "Cordialement,",
+    "message_view_ticket": "Suivre ce ticket"
   }
 }

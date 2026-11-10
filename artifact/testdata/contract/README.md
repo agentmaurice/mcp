@@ -7,3 +7,8 @@ Injection cases are ported from `tests/test_contract.py` (`INJECTION_CASES`).
 
 `golden/valid/dashboard` (six chart/v1 charts, AGENT-1582 lot 2) is copied unchanged from
 commit ebbf0855f70eac610aca6f8d0307e583c671453e of the worktree `pilote-maurice-agent-1582`.
+
+`golden/valid/support-reply` (message profile, mjml engine, AGENT-1614 lot 3) and the three
+`message_*` strings added to `golden/context/i18n.fr.json` are copied unchanged from commit
+9f3a8adbcdabbc57bebf7cc944f49ce8839efec4 of the worktree `pilote-maurice-agent-1614` (not yet merged
+when copied). `golden/context/company.example.json` is not recopied (see `internal/template/contract/PIN`).

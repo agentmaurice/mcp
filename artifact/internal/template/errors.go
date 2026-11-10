@@ -36,6 +36,18 @@ const (
 	CodeReservedFileName    = "reserved_file_name"
 	CodeFileExtension       = "file_extension_forbidden"
 	CodeInvalidModeOrOutput = "invalid_arguments"
+
+	// Message profile (mjml engine; html, txt and eml outputs).
+	CodeMJMLFailed             = "mjml_failed"
+	CodeMJMLIncludeOutside     = "mjml_include_outside_fragments"
+	CodeMJMLIncludeDenied      = "mjml_include_denied"
+	CodeMessageOutputInvalid   = "message_output_invalid"
+	CodeMessageTemplateResidue = "message_template_residue"
+	CodeMessageTooHeavy        = "message_html_too_heavy"
+	CodeMessageURLNotHTTPS     = "message_url_not_https"
+	CodeMessageUnsubscribeMiss = "message_unsubscribe_missing"
+	CodeMessageHiddenRule      = "message_hidden_rule_unsupported"
+	CodeMessageReservedChar    = "message_reserved_character"
 )
 
 // Error is a render or validation failure with a stable code.

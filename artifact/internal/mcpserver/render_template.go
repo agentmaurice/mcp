@@ -14,13 +14,14 @@ import (
 	artifactengine "github.com/agentmaurice/mcpchatui/mcp/artifact/internal/artifact"
 	"github.com/agentmaurice/mcpchatui/mcp/artifact/internal/buffer"
 	"github.com/agentmaurice/mcpchatui/mcp/artifact/internal/interchange"
+	"github.com/agentmaurice/mcpchatui/mcp/artifact/internal/mjml"
 	"github.com/agentmaurice/mcpchatui/mcp/artifact/internal/template"
 	"github.com/agentmaurice/mcpchatui/mcp/artifact/internal/typst"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
 const (
-	renderDescription = "Render a template/v1 folder (inline manifest and files) with data and the platform context to a deterministic pdf, png, html or txt, with PNG previews of every page and a provenance manifest. Without `template`, output ics, vcf or csv renders typed `data` (closed schema, see capabilities) to an iCalendar, vCard 4.0 or normalized CSV file. Without `template`, the v0.1 call (format, content, output_format) still renders Markdown or HTML to a simple PDF."
+	renderDescription = "Render a template/v1 folder (inline manifest and files) with data and the platform context to a deterministic pdf, png, html, txt or eml (message profile, engine mjml: html, txt and eml, no sending), with PNG previews of every page and a provenance manifest. Without `template`, output ics, vcf or csv renders typed `data` (closed schema, see capabilities) to an iCalendar, vCard 4.0 or normalized CSV file. Without `template`, the v0.1 call (format, content, output_format) still renders Markdown or HTML to a simple PDF."
 	// Largest request accepted by the template render (template + data + assets).
 	maxRenderRequestBytes = 4 * 1024 * 1024
 	// Budget for inline PNG previews when no Buffer is configured.
@@ -29,21 +30,25 @@ const (
 
 // Deps are the collaborators of the server.
 type Deps struct {
-	Compiler template.Compiler // nil when no Typst engine is configured
-	Buffer   *buffer.Client    // nil when the Buffer service is not configured
+	Compiler template.Compiler     // nil when no Typst engine is configured
+	MJML     template.MJMLCompiler // nil when no MJML engine is configured
+	Buffer   *buffer.Client        // nil when the Buffer service is not configured
 	Options  template.Options
 }
 
 type handlers struct{ deps Deps }
 
 // DepsFromEnv reads the engine, limits and Buffer from the environment:
-// TYPST_BIN, ARTIFACT_FONT_PATH, ARTIFACT_RENDER_TIMEOUT_SECONDS (60),
+// TYPST_BIN, MJML_NODE_BIN, MJML_DIR, ARTIFACT_FONT_PATH, ARTIFACT_RENDER_TIMEOUT_SECONDS (60),
 // ARTIFACT_MAX_PAGES (50), ARTIFACT_MAX_TEMPLATE_BYTES (1 MiB),
 // ARTIFACT_RENDER_MAX_MEMORY_MB, and the ARTIFACT_BUFFER_* variables.
 func DepsFromEnv() Deps {
 	var d Deps
 	if r := typst.FromEnv(); r.Available() {
 		d.Compiler = r
+	}
+	if r := mjml.FromEnv(); r.Available() {
+		d.MJML = r
 	}
 	d.Buffer = buffer.FromEnv()
 	d.Options = template.Options{Timeout: 60 * time.Second}
@@ -61,6 +66,7 @@ func DepsFromEnv() Deps {
 
 func (h *handlers) options() template.Options {
 	o := h.deps.Options
+	o.MJML = h.deps.MJML
 	if o.MaxPages <= 0 {
 		o.MaxPages = template.DefaultMaxPages
 	}
@@ -92,7 +98,7 @@ func renderSchema() mcp.ToolInputSchema {
 			"doc": map[string]interface{}{"type": "object"}, "i18n": map[string]interface{}{"type": "object"},
 		}),
 		"assets":             map[string]interface{}{"type": "object", "additionalProperties": str, "description": "Local files referenced by the brand (logo), base64, by file name."},
-		"output":             map[string]interface{}{"type": "string", "enum": []string{"pdf", "png", "html", "txt", "ics", "vcf", "csv"}, "description": "pdf, png, html, txt render a template; ics, vcf, csv render typed `data` with a Go engine, without template (see utility_outputs in artifact_capabilities_v1)."},
+		"output":             map[string]interface{}{"type": "string", "enum": []string{"pdf", "png", "html", "txt", "eml", "ics", "vcf", "csv"}, "description": "pdf, png, html, txt, eml render a template (eml: message profile only); ics, vcf, csv render typed `data` with a Go engine, without template (see utility_outputs in artifact_capabilities_v1)."},
 		"options":            map[string]interface{}{"type": "object", "description": "csv output only: separator, bom, line_ending, quote, expected_columns, expected_headers, neutralize_formulas."},
 		"mode":               map[string]interface{}{"type": "string", "enum": []string{"preview", "final"}, "default": "preview"},
 		"creation_timestamp": map[string]interface{}{"type": "integer", "description": "Fixed Unix timestamp; default is doc.date at 00:00 UTC."},
@@ -143,7 +149,7 @@ func (h *handlers) renderTemplate(ctx context.Context, request mcp.CallToolReque
 		return failure("invalid_arguments", "arguments do not match schema: "+err.Error()), nil
 	}
 	if in.Output == "" {
-		return failure("invalid_arguments", "output is required (pdf, png, html or txt)"), nil
+		return failure("invalid_arguments", "output is required (pdf, png, html, txt or eml)"), nil
 	}
 	assets := map[string][]byte{}
 	for name, enc := range in.Assets {
@@ -251,6 +257,13 @@ func (h *handlers) capabilities(ctx context.Context, _ mcp.CallToolRequest) (*mc
 		cancel()
 		typstOK = err == nil && v == template.TypstVersion
 	}
+	mjmlOK := false
+	if h.deps.MJML != nil {
+		cctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		v, err := h.deps.MJML.Version(cctx)
+		cancel()
+		mjmlOK = err == nil && v == template.MJMLVersion
+	}
 	return result(map[string]interface{}{
 		"version":         "v1",
 		"service_version": serviceVersion,
@@ -259,6 +272,7 @@ func (h *handlers) capabilities(ctx context.Context, _ mcp.CallToolRequest) (*mc
 		"preview_formats": []string{"pdf"},
 		"engines": []map[string]interface{}{
 			{"name": "typst", "version": template.TypstVersion, "available": typstOK, "outputs": []string{"pdf", "png"}, "previews": "png_per_page"},
+			{"name": "mjml", "version": template.MJMLVersion, "available": mjmlOK, "outputs": []string{"html", "txt", "eml"}, "previews": "none"},
 			{"name": "html", "version": "go-template", "available": true, "outputs": []string{"html"}, "previews": "none"},
 			{"name": "text", "version": "go-template", "available": true, "outputs": []string{"txt"}, "previews": "none"},
 			{"name": "interchange", "version": "go-stdlib", "available": true, "outputs": []string{"ics", "vcf", "csv"}, "previews": "none"},
@@ -279,6 +293,8 @@ func (h *handlers) capabilities(ctx context.Context, _ mcp.CallToolRequest) (*mc
 			template.CodeTypstCodeContext, template.CodeTypstEscapedAction, template.CodeTypstRawContext, template.CodeTypstMathContext, template.CodeTypstCommentContext, template.CodeContextInvalid, template.CodeDataInvalid, template.CodeFilePathInvalid,
 			template.CodeEngineUnsupported, template.CodeOutputUnsupported, template.CodePackageImport, template.CodeCompileFailed,
 			template.CodeRenderTimeout, template.CodeEngineUnavailable, template.CodeEngineVersion, template.CodeAssetInvalid, template.CodeReservedFileName, template.CodeFileExtension,
+			template.CodeMJMLFailed, template.CodeMJMLIncludeOutside, template.CodeMJMLIncludeDenied, template.CodeMessageOutputInvalid, template.CodeMessageTemplateResidue,
+			template.CodeMessageTooHeavy, template.CodeMessageURLNotHTTPS, template.CodeMessageUnsubscribeMiss, template.CodeMessageHiddenRule, template.CodeMessageReservedChar,
 			"invalid_arguments", "storage_required", "buffer_failed",
 			"invalid_artifact", "artifact_create_failed", "artifact_patch_failed", "artifact_render_failed", // v0.1 contract
 		},

@@ -5,3 +5,7 @@ other_files: unchanged since 2f94c37667d43a7a2a5e9c7ee03c28f156f8741c (manifest.
 not_recopied: namespaces.schema.json (pilote main has the optional company.bank of AGENT-1575, not vendored here; out of scope of AGENT-1582)
 files: manifest.schema.json namespaces.schema.json tokens.schema.json chart.schema.json fragments/*.typ
 Update by copying again and bumping this PIN; do not edit the copies by hand.
+
+AGENT-1614 lot 3 (message profile, mjml engine): manifest.schema.json (message.category) and fragments/message/*.mjml
+source_commit: e2d122e7f5159beca370a83166894dac383f84e9 (pilote-maurice main, merge of !1014, AGENT-1614 lot 2); files byte-identical to that commit
+the other vendored files are unchanged by lot 2; namespaces.schema.json is still not recopied (see not_recopied above)

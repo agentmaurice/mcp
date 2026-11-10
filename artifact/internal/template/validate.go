@@ -17,7 +17,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
-//go:embed contract/*.json contract/fragments/*.typ
+//go:embed contract/*.json contract/fragments/*.typ contract/fragments/message/*.mjml
 var contractFS embed.FS
 
 // Template is a template/v1 folder provided inline: the manifest (an object)
@@ -39,7 +39,12 @@ type Manifest struct {
 	Outputs     []string `json:"outputs"`
 	InputSchema string   `json:"input_schema"`
 	Fragments   []string `json:"fragments"`
-	Limits      struct {
+	// Message holds the optional settings of the message profile; an absent
+	// category reads as transactional.
+	Message struct {
+		Category string `json:"category"`
+	} `json:"message"`
+	Limits struct {
 		MaxSourceBytes int `json:"max_source_bytes"`
 		MaxPages       int `json:"max_pages"`
 	} `json:"limits"`
@@ -258,7 +263,13 @@ func ValidateCtx(ctx context.Context, t Template, data any, output string, maxTe
 
 	for _, fragment := range m.Fragments {
 		body, err := contractFS.ReadFile("contract/" + fragment)
-		if err != nil || !strings.HasPrefix(fragment, "fragments/") || strings.HasSuffix(fragment, ".mjml") {
+		// mjml: only the library fragments of the message profile; every other
+		// engine keeps its former rule (no .mjml fragment).
+		wrongKind := strings.HasSuffix(fragment, ".mjml")
+		if engine == EngineMJML {
+			wrongKind = !strings.HasPrefix(fragment, messageFragmentDir+"/") || !strings.HasSuffix(fragment, ".mjml")
+		}
+		if err != nil || !strings.HasPrefix(fragment, "fragments/") || wrongKind {
 			return nil, errf(CodeFragmentMissing, "fragment %q is not in the library", fragment)
 		}
 		p.Fragments[fragment] = string(body)
@@ -301,6 +312,8 @@ func engineProduces(engine, output string) bool {
 		return output == "html"
 	case EngineText:
 		return output == "txt"
+	case EngineMJML:
+		return output == "html" || output == "txt" || output == "eml"
 	}
 	return false
 }
@@ -703,10 +716,14 @@ func resolveLocal(root map[string]any, ref string) map[string]any {
 
 // LibraryFragments lists the fragments of the embedded library, sorted.
 func LibraryFragments() []string {
-	entries, _ := contractFS.ReadDir("contract/fragments")
 	var out []string
-	for _, e := range entries {
-		out = append(out, path.Join("fragments", e.Name()))
+	for _, dir := range []string{"fragments", messageFragmentDir} {
+		entries, _ := contractFS.ReadDir("contract/" + dir)
+		for _, e := range entries {
+			if !e.IsDir() {
+				out = append(out, path.Join(dir, e.Name()))
+			}
+		}
 	}
 	sort.Strings(out)
 	return out

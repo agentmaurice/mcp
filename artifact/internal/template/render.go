@@ -82,6 +82,7 @@ type Options struct {
 	MaxOutputBytes   int // size of each executed template output (default 20 MiB)
 	MaxValuesBytes   int // total size of the Typst values table, values.json (default 8 MiB)
 	Timeout          time.Duration
+	MJML             MJMLCompiler // nil when no MJML engine is configured (mjml engine only)
 }
 
 // Provenance records where a rendered file comes from. Same request, same
@@ -310,6 +311,9 @@ func Render(ctx context.Context, req Request, compiler Compiler, opts Options) (
 			res.MimeType = "text/plain; charset=utf-8"
 		}
 		return res, nil
+	}
+	if p.Manifest.Source.Engine == EngineMJML {
+		return renderMessage(ctx, req, p, entryName, rendered, fragments, full, opts, res)
 	}
 	return renderTypst(ctx, req, p, ex, entryName, rendered, locals, fragments, ts, compiler, opts, res)
 }

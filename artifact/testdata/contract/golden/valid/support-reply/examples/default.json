@@ -1,0 +1,19 @@
+{
+  "customer_name": "Camille Durand",
+  "preheader": "Nous avons corrigé l'export : voici ce qui change pour vous.",
+  "paragraphs": [
+    "Merci pour votre message et pour le fichier joint : il nous a permis de reproduire le problème en quelques minutes.",
+    "L'export CSV s'arrêtait à 10 000 lignes lorsque le filtre « Statut » contenait une esperluette (R&D). Le correctif est en production depuis ce matin. Pour mémoire, la valeur de test que vous aviez saisie, {{ 1+1 }}, est conservée telle quelle : <b>aucun calcul</b> n'est effectué sur vos données.",
+    "Le crédit de 1 250,00 € HT correspondant au mois concerné sera déduit de votre prochaine facture."
+  ],
+  "steps_title": "Pour relancer votre export",
+  "steps": [
+    "Ouvrez la page « Exports » et cliquez sur « Relancer ».",
+    "Patientez jusqu'à la fin du traitement (environ 2 minutes).",
+    "Téléchargez le nouveau fichier : il contient 24 318 lignes."
+  ],
+  "agent_name": "Léa Martin",
+  "agent_role": "Support client",
+  "ticket_url": "https://support.atelier-exemple.invalid/tickets/SUP-48213?utm_source=email&utm_medium=reply",
+  "unsubscribe_url": "https://app.atelier-exemple.invalid/preferences?u=c4f9&list=support&lang=fr"
+}

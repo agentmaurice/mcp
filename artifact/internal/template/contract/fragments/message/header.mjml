@@ -1,0 +1,8 @@
+<!-- Fragment partage (profil message) : en-tete d'e-mail. Inclure par <mj-include path="fragments/message/header.mjml" />. -->
+<mj-section background-color="{{ .brand.colors.background }}" padding="16px 24px">
+  <mj-column>
+    <mj-text font-family="{{ .brand.fonts.heading.family }}" font-size="20px" font-weight="bold" color="{{ .brand.colors.primary }}">
+      {{ .company.trade_name }}
+    </mj-text>
+  </mj-column>
+</mj-section>

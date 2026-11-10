@@ -5,7 +5,7 @@ package template
 // see contract/PIN): Go templates run against the single object
 // {data, company, brand, doc, i18n} with missingkey=zero; Typst values are
 // passed BY REFERENCE (`#__v.at(N)` plus a values table) so a value is never
-// part of the Typst source; html uses html/template; text escapes nothing.
+// part of the Typst source; html and mjml use html/template; text escapes nothing.
 
 import (
 	"bytes"
@@ -30,6 +30,7 @@ const (
 	EngineTypst = "typst"
 	EngineHTML  = "html"
 	EngineText  = "text"
+	EngineMJML  = "mjml"
 )
 
 // presentName is appended after the author's commands (so after a `default`)
@@ -77,6 +78,8 @@ func isZero(v any) bool {
 	case nil:
 		return true
 	case string:
+		return x == ""
+	case markedString:
 		return x == ""
 	case bool:
 		return !x
@@ -135,7 +138,7 @@ type executor struct {
 
 func newExecutor(gctx context.Context, engine string, ctx map[string]any, maxOutput int) (*executor, error) {
 	switch engine {
-	case EngineTypst, EngineHTML, EngineText:
+	case EngineTypst, EngineHTML, EngineText, EngineMJML:
 		if maxOutput <= 0 {
 			maxOutput = DefaultMaxOutputBytes
 		}
@@ -202,7 +205,9 @@ func (e *executor) render(src string) (string, error) {
 
 func (e *executor) renderNow(src string) (string, error) {
 	switch e.engine {
-	case EngineHTML:
+	case EngineHTML, EngineMJML:
+		// mjml: MJML is XML-like markup, so a value is escaped like html/template
+		// escapes it in HTML text and attributes (the contract names this escaper escMJML).
 		return e.renderHTML(src)
 	case EngineTypst:
 		return e.renderTypst(src)

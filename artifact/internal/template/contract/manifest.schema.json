@@ -79,6 +79,14 @@
       },
       "additionalProperties": true
     },
+    "message": {
+      "type": "object",
+      "description": "Reglages du profil message (facultatif, absent = transactionnel). Reserve au profil `message`.",
+      "properties": {
+        "category": { "enum": ["transactional", "marketing"], "description": "`marketing` : le pied de desabonnement est exige (`message_unsubscribe_missing`)." }
+      },
+      "additionalProperties": true
+    },
     "imported": {
       "type": "object",
       "description": "Gabarit Office importe : corps opaque, enveloppe par ce manifeste.",

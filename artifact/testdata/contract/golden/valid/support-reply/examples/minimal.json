@@ -1,0 +1,11 @@
+{
+  "customer_name": "Camille Durand",
+  "preheader": "Nous avons corrigé l'export : voici ce qui change pour vous.",
+  "agent_name": "Léa Martin",
+  "agent_role": "Support client",
+  "ticket_url": "https://support.atelier-exemple.invalid/tickets/SUP-48213?utm_source=email&utm_medium=reply",
+  "unsubscribe_url": "https://app.atelier-exemple.invalid/preferences?u=c4f9&list=support&lang=fr",
+  "paragraphs": [
+    "Merci pour votre message et pour le fichier joint : il nous a permis de reproduire le problème en quelques minutes."
+  ]
+}

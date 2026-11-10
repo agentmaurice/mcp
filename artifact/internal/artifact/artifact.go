@@ -169,6 +169,8 @@ func mimeType(format string) string {
 		return "image/png"
 	case "txt":
 		return "text/plain"
+	case "eml":
+		return "message/rfc822"
 	default:
 		return "application/octet-stream"
 	}

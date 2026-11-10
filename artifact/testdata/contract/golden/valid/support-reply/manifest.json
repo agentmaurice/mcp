@@ -1,0 +1,43 @@
+{
+  "schema": "agentmaurice.template/v1",
+  "key": "support-reply",
+  "version": "1.0.0",
+  "title": "Réponse du support",
+  "description": "E-mail transactionnel de réponse à un ticket de support : étapes à suivre, lien vers le ticket, pied de contrat.",
+  "kind": "message",
+  "profile": "message",
+  "message": {
+    "category": "transactional"
+  },
+  "source": {
+    "engine": "mjml",
+    "entry": "main.mjml"
+  },
+  "outputs": [
+    "html",
+    "txt",
+    "eml"
+  ],
+  "locales": [
+    "fr"
+  ],
+  "default_locale": "fr",
+  "input_schema": "input.schema.json",
+  "examples": [
+    {
+      "name": "default",
+      "data": "examples/default.json"
+    },
+    {
+      "name": "minimal",
+      "data": "examples/minimal.json"
+    }
+  ],
+  "fragments": [
+    "fragments/message/header.mjml",
+    "fragments/message/footer-unsubscribe.mjml"
+  ],
+  "limits": {
+    "max_source_bytes": 20000
+  }
+}
